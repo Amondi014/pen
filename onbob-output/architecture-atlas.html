@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>onBob — Architectural Atlas</title>
+<style>
+:root{
+  --bg:#080811;--s:#0f0f1c;--s2:#16162a;--s3:#1f1f3a;
+  --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.2);
+  --tx:#f3f4f6;--mu:#94a3b8;
+  --pu:#8A3FFC;--bl:#0F62FE;--gn:#24a148;--rd:#ef4444;--am:#f59e0b;
+  --r:9px;--sh:0 8px 32px rgba(0,0,0,.6);
+  --mono:'IBM Plex Mono','Cascadia Code','Fira Code',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);font-size:13px;display:flex;flex-direction:column;}
+
+/* ── Loading screen ─────────────────────────────────────── */
+#loading{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.spin{width:36px;height:36px;border:3px solid rgba(138,63,252,.2);border-top-color:var(--pu);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font-size:.8rem;color:var(--mu);}
+#loading code{font-family:var(--mono);font-size:.72rem;color:#93c5fd;background:rgba(0,0,0,.3);padding:4px 10px;border-radius:4px;}
+
+/* ── Error screen ───────────────────────────────────────── */
+#error-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:32px;}
+#error-screen h2{font-size:1.1rem;color:#fff;}
+#error-screen p{font-size:.78rem;color:var(--mu);text-align:center;max-width:480px;line-height:1.6;}
+.err-cmd{font-family:var(--mono);font-size:.72rem;background:rgba(0,0,0,.4);border:1px solid var(--bd2);padding:10px 16px;border-radius:6px;color:#93c5fd;white-space:pre;}
+
+/* ── Header ─────────────────────────────────────────────── */
+.hdr{height:50px;flex-shrink:0;background:rgba(8,8,17,.98);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 16px;gap:10px;}
+.logo{font-size:1.05rem;font-weight:700;display:flex;align-items:center;gap:5px;letter-spacing:-.02em;}
+.logo span{color:var(--pu);}
+.bai{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:3px;background:rgba(138,63,252,.18);color:#c4b5fd;border:1px solid rgba(138,63,252,.4);}
+.bro{font-size:.62rem;color:#42be65;background:rgba(66,190,101,.12);border:1px solid rgba(66,190,101,.3);padding:2px 8px;border-radius:9px;display:flex;align-items:center;gap:4px;font-family:var(--mono);}
+.bro::before{content:'';width:5px;height:5px;border-radius:50%;background:#42be65;box-shadow:0 0 5px #42be65;}
+.hsp{flex:1;}
+.hbtn{background:var(--s2);border:1px solid var(--bd);color:var(--mu);font-family:inherit;font-size:.72rem;padding:5px 10px;border-radius:5px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:4px;}
+.hbtn:hover{border-color:var(--bl);color:var(--bl);background:rgba(15,98,254,.08);}
+.hbtn.blast{border-color:rgba(239,68,68,.4);color:#f87171;background:rgba(239,68,68,.07);font-weight:600;}
+.hbtn.blast:hover{border-color:var(--rd);background:rgba(239,68,68,.18);}
+
+/* ── Banner ─────────────────────────────────────────────── */
+.banner{flex-shrink:0;background:linear-gradient(90deg,rgba(15,98,254,.1),rgba(138,63,252,.1));border-bottom:1px solid rgba(138,63,252,.18);padding:5px 16px;font-size:.68rem;color:#cbd5e1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.chip{background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px;border:1px solid var(--bd);font-family:var(--mono);color:#93c5fd;font-size:.64rem;}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.layout{flex:1;display:grid;grid-template-columns:1fr 400px;overflow:hidden;}
+
+/* ── Left: Blueprint ────────────────────────────────────── */
+.left{display:flex;flex-direction:column;border-right:1px solid var(--bd);background:var(--s);overflow:hidden;}
+.lbar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--bd);background:rgba(10,10,20,.6);flex-shrink:0;}
+.ltit{font-size:.76rem;font-weight:600;color:#cbd5e1;}
+.mbtn{font-size:.65rem;padding:3px 8px;border:1px solid rgba(138,63,252,.4);border-radius:3px;background:rgba(138,63,252,.12);color:#c4b5fd;cursor:pointer;}
+.stage{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:radial-gradient(circle at 10% 20%,rgba(15,98,254,.04) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(138,63,252,.04) 0%,transparent 40%),linear-gradient(rgba(255,255,255,.01) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.01) 1px,transparent 1px);background-size:100% 100%,100% 100%,26px 26px,26px 26px;}
+.arch-layer{background:rgba(22,22,42,.7);border:1px solid var(--bd);border-radius:var(--r);padding:12px;transition:all .25s;}
+.arch-layer.lit{border-color:var(--la,var(--bl));box-shadow:0 0 18px rgba(var(--lr,15,98,254),.18);}
+.ltag{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);display:flex;align-items:center;gap:5px;margin-bottom:8px;}
+.ldot{width:5px;height:5px;border-radius:50%;background:var(--la,#60a5fa);}
+.lgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;}
+.nc{background:var(--s);border:1px solid var(--bd);border-radius:7px;padding:9px 11px;cursor:pointer;transition:all .2s;}
+.nc:hover{border-color:var(--nc,var(--bl));background:rgba(255,255,255,.035);transform:translateY(-2px);}
+.nc.sel{border-color:var(--nc);background:rgba(var(--nr,15,98,254),.13);box-shadow:0 0 12px rgba(var(--nr,15,98,254),.28);}
+.nc-t{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.nc-ic{font-size:1rem;}
+.nc-nm{font-size:.76rem;font-weight:600;color:#fff;}
+.nc-d{font-size:.66rem;color:var(--mu);line-height:1.35;margin-bottom:5px;}
+.nc-f{font-family:var(--mono);font-size:.58rem;background:rgba(255,255,255,.04);padding:2px 4px;border-radius:3px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;display:block;}
+.conn{display:flex;align-items:center;justify-content:center;gap:7px;padding:2px 0;font-size:.62rem;font-family:var(--mono);color:var(--mu);}
+.cline{flex:1;max-width:90px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);}
+.cbdg{background:var(--s2);border:1px solid var(--bd);padding:2px 6px;border-radius:8px;font-size:.6rem;color:#93c5fd;}
+
+/* ── Right: Map pane ────────────────────────────────────── */
+.right{display:flex;flex-direction:column;background:var(--s);overflow:hidden;}
+.rhdr{padding:10px 14px 7px;border-bottom:1px solid var(--bd);flex-shrink:0;}
+.rhdr h2{font-size:.76rem;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;}
+.rsub{font-size:.65rem;color:rgba(148,163,184,.55);margin-top:1px;}
+.tabs{display:flex;border-bottom:1px solid var(--bd);padding:0 8px;background:var(--bg);flex-shrink:0;}
+.tab{font-size:.67rem;padding:7px 10px;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer;transition:all .2s;}
+.tab.a{color:var(--pu);border-bottom-color:var(--pu);font-weight:600;}
+
+/* ── Pillars view ───────────────────────────────────────── */
+.pv{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:7px;}
+.pv::-webkit-scrollbar,.mv::-webkit-scrollbar,.qv::-webkit-scrollbar,.dr-body::-webkit-scrollbar{width:3px;}
+.pv::-webkit-scrollbar-thumb,.mv::-webkit-scrollbar-thumb,.qv::-webkit-scrollbar-thumb,.dr-body::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+.pc{background:var(--s2);border:1px solid var(--bd);border-radius:var(--r);padding:11px;position:relative;overflow:hidden;cursor:pointer;transition:all .25s;}
+.pc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--pc,var(--bl));}
+.pc:hover{border-color:var(--pc);background:rgba(255,255,255,.022);transform:translateX(2px);}
+.pc.glow{border-color:var(--pc);background:rgba(var(--pr),0.09);box-shadow:0 0 16px rgba(var(--pr),.22);}
+.pc-t{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.pc-ic{font-size:1.1rem;}
+.pc-nm{font-size:.82rem;font-weight:600;flex:1;color:#fff;}
+.pc-tm{font-size:.58rem;color:var(--mu);background:rgba(255,255,255,.04);padding:2px 4px;border-radius:3px;font-family:var(--mono);}
+.pc-ms{font-size:.67rem;color:var(--mu);line-height:1.35;margin-bottom:7px;}
+.hrow{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px;}
+.hb{font-size:.58rem;padding:2px 5px;border-radius:8px;font-weight:500;font-family:var(--mono);}
+.hb.g{background:rgba(36,161,72,.14);color:#42be65;border:1px solid rgba(36,161,72,.28);}
+.hb.a{background:rgba(245,158,11,.14);color:#fbbf24;border:1px solid rgba(245,158,11,.28);}
+.hb.r{background:rgba(239,68,68,.14);color:#f87171;border:1px solid rgba(239,68,68,.28);}
+.hb.p{background:rgba(138,63,252,.14);color:#c4b5fd;border:1px solid rgba(138,63,252,.28);}
+.hb.gr{background:rgba(255,255,255,.04);color:var(--mu);border:1px solid var(--bd);}
+.pc-dep{font-size:.62rem;color:var(--mu);margin-bottom:5px;}
+.pc-btns{display:flex;gap:4px;margin-top:4px;}
+.sb{flex:1;padding:4px 6px;font-size:.63rem;border-radius:4px;border:1px solid var(--bd);background:var(--s3);color:var(--tx);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:3px;}
+.sb:hover{color:#fff;}
+.sb.tr{border-color:rgba(138,63,252,.3);color:#c4b5fd;}
+.sb.tr:hover{background:rgba(138,63,252,.14);border-color:var(--pu);}
+.sb.bl{border-color:rgba(239,68,68,.25);color:#f87171;background:rgba(239,68,68,.05);}
+.sb.bl:hover{background:rgba(239,68,68,.16);border-color:var(--rd);}
+
+/* ── Mesh view ──────────────────────────────────────────── */
+.mv{flex:1;display:none;overflow:hidden;position:relative;background:var(--bg);}
+.mv.a{display:block;}
+.mv svg{position:absolute;inset:0;width:100%;height:100%;}
+.mn{position:absolute;width:78px;height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);cursor:pointer;transition:all .25s;z-index:10;}
+.mn:hover{transform:scale(1.07);border-color:var(--pc);}
+.mn.lit{border-color:var(--pc);background:rgba(var(--pr),.17);box-shadow:0 0 16px rgba(var(--pr),.42);}
+.mn.haz{border-color:var(--rd)!important;background:rgba(239,68,68,.26)!important;box-shadow:0 0 20px rgba(239,68,68,.65)!important;animation:hfl .9s infinite alternate;}
+.mn.hit{border-color:var(--am)!important;background:rgba(245,158,11,.16)!important;box-shadow:0 0 14px rgba(245,158,11,.45)!important;}
+@keyframes hfl{from{box-shadow:0 0 8px rgba(239,68,68,.4);}to{box-shadow:0 0 24px rgba(239,68,68,.9);}}
+@keyframes dm{to{stroke-dashoffset:-18;}}
+.ea{animation:dm .75s linear infinite;}
+
+/* ── Quest view ─────────────────────────────────────────── */
+.qv{flex:1;display:none;overflow-y:auto;padding:10px 12px;}
+.qv.a{display:block;}
+.qpb{height:3px;background:var(--s3);border-radius:2px;margin-bottom:8px;overflow:hidden;}
+.qpf{height:100%;background:var(--gn);border-radius:2px;transition:width .4s;}
+.qph{margin-bottom:12px;}
+.qphl{display:flex;align-items:center;gap:6px;padding:4px 0 6px;}
+.qphd{width:7px;height:7px;border-radius:50%;}
+.qphn{font-size:.72rem;font-weight:600;color:#fff;}
+.qt{display:flex;align-items:flex-start;gap:6px;padding:5px 6px;border-radius:5px;cursor:pointer;margin-bottom:2px;transition:background .2s;}
+.qt:hover{background:rgba(255,255,255,.036);}
+.qt.dn .qtt{text-decoration:line-through;color:var(--mu);}
+.qtck{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--bd);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:.5rem;transition:all .2s;}
+.qt.dn .qtck{background:var(--gn);border-color:var(--gn);color:#fff;}
+.qtt{font-size:.68rem;color:var(--tx);line-height:1.3;flex:1;}
+.qthi{font-size:.58rem;color:var(--mu);font-family:var(--mono);margin-top:1px;}
+
+/* ── Stage 2 CTA ────────────────────────────────────────── */
+.s2{border-top:1px solid var(--bd);background:rgba(138,63,252,.05);padding:10px 12px;flex-shrink:0;}
+.s2t{font-size:.68rem;font-weight:600;color:#c4b5fd;margin-bottom:6px;}
+.s2o{display:flex;flex-direction:column;gap:4px;}
+.s2b{background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:6px 8px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;}
+.s2b:hover{border-color:var(--pu);background:rgba(138,63,252,.09);}
+.s2n{width:16px;height:16px;border-radius:50%;background:rgba(138,63,252,.22);color:#c4b5fd;font-size:.58rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.s2l{font-size:.68rem;font-weight:600;color:#fff;}
+.s2d{font-size:.6rem;color:var(--mu);}
+
+/* ── Execution drawer ───────────────────────────────────── */
+.dr{position:fixed;top:0;right:-560px;bottom:0;width:540px;background:var(--s2);border-left:1px solid var(--bd);box-shadow:var(--sh);z-index:200;transition:right .35s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;}
+.dr.open{right:0;}
+.dr-hdr{padding:13px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--s);flex-shrink:0;}
+.dr-ti{font-size:.88rem;font-weight:700;color:#fff;}
+.dr-su{font-size:.65rem;color:var(--mu);margin-top:2px;}
+.dr-cl{background:none;border:none;color:var(--mu);font-size:1.1rem;cursor:pointer;padding:3px 7px;border-radius:4px;}
+.dr-cl:hover{color:#fff;background:rgba(255,255,255,.06);}
+.dr-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.curl{background:rgba(0,0,0,.38);border:1px solid var(--bd);border-radius:6px;padding:9px 11px;}
+.curl-l{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:5px;}
+.curl-c{font-family:var(--mono);font-size:.64rem;color:#93c5fd;word-break:break-all;line-height:1.4;}
+.curl-o{font-family:var(--mono);font-size:.63rem;color:#42be65;white-space:pre-wrap;line-height:1.35;margin-top:6px;border-top:1px solid var(--bd);padding-top:6px;}
+.stb{display:inline-block;font-family:var(--mono);font-size:.6rem;padding:2px 6px;border-radius:3px;background:rgba(36,161,72,.13);color:#42be65;border:1px solid rgba(36,161,72,.28);margin-top:5px;}
+.step{background:var(--s);border:1px solid var(--bd);border-radius:7px;padding:10px 12px;position:relative;cursor:pointer;transition:border-color .2s;}
+.step:hover{border-color:var(--pu);}
+.step-n{position:absolute;top:10px;right:10px;font-family:var(--mono);font-size:.6rem;color:var(--mu);background:rgba(255,255,255,.04);padding:1px 5px;border-radius:6px;}
+.step-t{font-size:.76rem;font-weight:600;color:#93c5fd;margin-bottom:2px;}
+.step-f{font-family:var(--mono);font-size:.67rem;color:#38bdf8;margin-bottom:4px;display:block;}
+.step-f:hover{color:#7dd3fc;text-decoration:underline;}
+.step-fn{font-family:var(--mono);font-size:.63rem;color:#a78bfa;margin-bottom:4px;}
+.step-d{font-size:.69rem;color:#cbd5e1;line-height:1.4;}
+.arr{display:flex;justify-content:center;padding:1px 0;color:rgba(138,63,252,.4);font-size:.72rem;}
+
+/* ── Blast modal ────────────────────────────────────────── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s;}
+.ov.vis{opacity:1;pointer-events:auto;}
+.bm{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.96);width:90%;max-width:780px;max-height:84vh;background:var(--s2);border:1px solid rgba(239,68,68,.4);box-shadow:0 20px 56px rgba(239,68,68,.2);border-radius:12px;z-index:310;display:flex;flex-direction:column;overflow:hidden;opacity:0;pointer-events:none;transition:all .25s cubic-bezier(.16,1,.3,1);}
+.bm.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1);}
+.bm-hdr{padding:13px 16px;background:linear-gradient(90deg,rgba(239,68,68,.14),rgba(22,22,42,.8));border-bottom:1px solid rgba(239,68,68,.26);display:flex;align-items:center;justify-content:space-between;}
+.bm-hdr h3{font-size:.9rem;font-weight:700;color:#fff;}
+.bm-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.bpills{display:flex;gap:6px;flex-wrap:wrap;}
+.bpill{background:var(--s);border:1px solid var(--bd);color:var(--mu);font-size:.68rem;padding:4px 9px;border-radius:16px;cursor:pointer;transition:all .2s;}
+.bpill.a{border-color:var(--rd);background:rgba(239,68,68,.13);color:#fca5a5;font-weight:600;}
+.bmet{display:flex;align-items:center;justify-content:space-between;background:var(--s);border:1px solid var(--bd);border-radius:7px;padding:10px 13px;}
+.brisk{font-family:var(--mono);font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:4px;}
+.rc{background:rgba(239,68,68,.2);color:#f87171;border:1px solid var(--rd);}
+.rh{background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid var(--am);}
+.rm{background:rgba(59,130,246,.2);color:#93c5fd;border:1px solid #3B82F6;}
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.bc{background:var(--s);border:1px solid var(--bd);border-radius:7px;padding:10px;}
+.bc-t{font-size:.68rem;font-weight:600;color:#cbd5e1;margin-bottom:5px;}
+.bl-{list-style:none;display:flex;flex-direction:column;gap:4px;}
+.bl- li{font-size:.64rem;color:var(--mu);line-height:1.35;display:flex;align-items:flex-start;gap:4px;}
+.wd{color:#f87171;font-weight:700;}
+.bm-ftr{padding:11px 16px;background:var(--s);border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px;}
+
+/* ── Toast ──────────────────────────────────────────────── */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(32px);background:rgba(15,15,30,.96);border:1px solid var(--bd2);color:#fff;font-size:.73rem;padding:6px 14px;border-radius:16px;box-shadow:var(--sh);z-index:500;opacity:0;pointer-events:none;transition:all .25s cubic-bezier(.16,1,.3,1);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spin"></div>
+  <p>Scanning repository data…</p>
+  <code id="loading-hint">fetch: atlas_data.json</code>
+</div>
+
+<!-- Error -->
+<div id="error-screen">
+  <h2>⚠️ No atlas data found</h2>
+  <p>Run the scanner against your repository first, then serve the output directory:</p>
+  <div class="err-cmd">python scripts/onBob_scanner.py /path/to/your/repo --out onbob-output
+python -m http.server 3000 --directory onbob-output
+# → open http://localhost:3000/architecture-atlas.html</div>
+  <p style="margin-top:8px;font-size:.7rem;">The scanner works on any Git repository — Python, TypeScript, Go, Rust, Java, and more.</p>
+</div>
+
+<!-- App (hidden until data loads) -->
+<div id="app" style="display:none;flex-direction:column;height:100%;">
+
+<div class="toast" id="toast"></div>
+
+<header class="hdr">
+  <div class="logo">/on<span>Bob</span><span class="bai">IBM Bob 2.0</span></div>
+  <div class="bro">READ-ONLY</div>
+  <span id="repo-label" style="font-size:.7rem;color:#93c5fd;font-family:var(--mono);"></span>
+  <div class="hsp"></div>
+  <button class="hbtn blast" onclick="openBlast()">💥 Blast Radius</button>
+  <button class="hbtn" onclick="openFirstTrace()">🔍 Explore Feature</button>
+</header>
+
+<div class="banner">
+  ⚡ <strong>IBM Bob 2.0</strong> scanned
+  <span class="chip" id="bFiles">? files</span> into
+  <span class="chip" id="bPillars">? pillars</span> with
+  <span class="chip" id="bEdges">? edges</span>
+  <span class="chip" id="bTraces">? traces</span>
+  <span id="bStack" style="opacity:.65;margin-left:4px;"></span>
+</div>
+
+<div class="layout">
+  <div class="left">
+    <div class="lbar">
+      <div class="ltit">🏛️ Architectural Blueprint <span style="font-size:.62rem;color:var(--mu);font-weight:normal">(click card to inspect)</span></div>
+      <div class="mbtn" id="modeBtn" onclick="toggleMode()">Blueprint ▾</div>
+    </div>
+    <div class="stage" id="stage"></div>
+  </div>
+
+  <div class="right">
+    <div class="rhdr">
+      <h2>Architectural Pillars</h2>
+      <div class="rsub" id="rsub">Loading…</div>
+    </div>
+    <div class="tabs">
+      <div class="tab a" id="tPillars" onclick="switchTab('pillars')">Pillars</div>
+      <div class="tab" id="tMesh"    onclick="switchTab('mesh')">L2 Mesh</div>
+      <div class="tab" id="tQuest"   onclick="switchTab('quest')">Onboarding Quest</div>
+    </div>
+
+    <div class="pv" id="pillarsView"></div>
+
+    <div class="mv" id="meshView">
+      <svg id="meshSvg"></svg>
+    </div>
+
+    <div class="qv" id="questView"></div>
+
+    <div class="s2">
+      <div class="s2t">🔍 Layer 3: Which feature would you like to explore?</div>
+      <div class="s2o" id="s2Options"></div>
+    </div>
+  </div>
+</div>
+</div><!-- /app -->
+
+<!-- Execution Drawer -->
+<div class="dr" id="drawer">
+  <div class="dr-hdr">
+    <div><div class="dr-ti" id="drTitle">Execution Trace</div><div class="dr-su" id="drSub"></div></div>
+    <button class="dr-cl" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="dr-body" id="drBody"></div>
+</div>
+
+<!-- Blast Modal -->
+<div class="ov" id="blastOv" onclick="closeBlast()"></div>
+<div class="bm" id="blastModal">
+  <div class="bm-hdr">
+    <h3>💥 Blast Radius Simulator</h3>
+    <button class="dr-cl" onclick="closeBlast()">✕</button>
+  </div>
+  <div class="bm-body">
+    <div style="font-size:.68rem;color:var(--mu);">Select a pillar to simulate what breaks if modified or deleted:</div>
+    <div class="bpills" id="blastPills"></div>
+    <div id="blastCard"></div>
+  </div>
+  <div class="bm-ftr">
+    <button class="hbtn" onclick="copyRunbook()">📋 Copy Runbook</button>
+    <button class="hbtn blast" onclick="triggerBlastMesh()">💥 Shockwave Mesh</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE — populated entirely from atlas_data.json
+// ═══════════════════════════════════════════════════════
+let D = null;            // full atlas_data.json payload
+let activePillar = null;
+let blastTarget  = null;
+let traceMode    = false;
+const questState = {};
+
+// ═══════════════════════════════════════════════════════
+// BOOT — fetch atlas_data.json, render everything
+// ═══════════════════════════════════════════════════════
+async function boot() {
+  try {
+    const res = await fetch('atlas_data.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    D = await res.json();
+    if (!D || !Array.isArray(D.pillars) || D.pillars.length === 0)
+      throw new Error('Empty or invalid atlas_data.json');
+    init();
+  } catch (e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error-screen').style.display = 'flex';
+  }
+}
+
+function init() {
+  // Init quest state
+  (D.quest?.phases || []).forEach(ph => ph.tasks.forEach(t => questState[t.id] = false));
+
+  // Default blast target = first pillar
+  blastTarget = D.pillars[0]?.id || null;
+
+  // Banner
+  document.getElementById('bFiles').textContent    = `${D.file_count || '?'} files`;
+  document.getElementById('bPillars').textContent  = `${D.pillar_count || D.pillars.length} pillars`;
+  document.getElementById('bEdges').textContent    = `${D.edge_count || (D.edges||[]).length} edges`;
+  document.getElementById('bTraces').textContent   = `${D.trace_count || (D.features||[]).length} traces`;
+  document.getElementById('bStack').textContent    = `· ${D.stack || D.primary_lang || ''} · Read-Only`;
+  document.getElementById('repo-label').textContent = D.repo_name || '';
+  document.getElementById('rsub').textContent      = `${D.pillars.length} Clustered Domains · ${D.stack || D.primary_lang || ''}`;
+  document.title = `onBob — ${D.repo_name || 'Atlas'}`;
+
+  render();
+
+  document.getElementById('loading').style.display = 'none';
+  const app = document.getElementById('app');
+  app.style.display = 'flex';
+}
+
+function render() {
+  renderStage();
+  renderPillars();
+  renderStage2();
+  renderMesh();
+  renderQuest();
+}
+
+// ═══════════════════════════════════════════════════════
+// BLUEPRINT STAGE
+// ═══════════════════════════════════════════════════════
+function renderStage() {
+  const el = document.getElementById('stage');
+  el.innerHTML = '';
+  const layers = buildLayers();
+  layers.forEach((layer, i) => {
+    const div = document.createElement('div');
+    div.className = 'arch-layer' + (layer.cards.some(c => c.pillarId === activePillar) ? ' lit' : '');
+    div.style.setProperty('--la', layer.color);
+    div.style.setProperty('--lr', hexRgb(layer.color));
+    div.innerHTML = `
+      <div class="ltag"><span class="ldot"></span>${esc(layer.tag)}</div>
+      <div class="lgrid">
+        ${layer.cards.map(c => `
+          <div class="nc ${activePillar === c.pillarId ? 'sel' : ''}"
+               onclick="clickNode('${c.pillarId}')"
+               style="--nc:${c.color};--nr:${hexRgb(c.color)};">
+            <div class="nc-t"><span class="nc-ic">${c.icon}</span><span class="nc-nm">${esc(c.name)}</span></div>
+            <div class="nc-d">${esc(c.desc)}</div>
+            <span class="nc-f" title="${esc(c.file)}">📄 ${esc(c.file)}</span>
+          </div>`).join('')}
+      </div>`;
+    el.appendChild(div);
+    if (i < layers.length - 1) {
+      const conn = document.createElement('div');
+      conn.className = 'conn';
+      conn.innerHTML = `<div class="cline"></div><span class="cbdg">▼ Directed Flow</span><div class="cline"></div>`;
+      el.appendChild(conn);
+    }
+  });
+}
+
+function buildLayers() {
+  // Group pillars 2-per-row into visual layers
+  const layers = [];
+  const tagNames = ['Ingress & API Layer', 'Domain Services & Logic',
+                    'Data & Storage Layer', 'Client & Presentation', 'Infrastructure'];
+  for (let i = 0; i < D.pillars.length; i += 2) {
+    const chunk = D.pillars.slice(i, i + 2);
+    layers.push({
+      tag: tagNames[Math.floor(i / 2)] || `Layer ${Math.floor(i / 2) + 1}`,
+      color: chunk[0].color,
+      cards: chunk.map(p => ({
+        pillarId: p.id, name: p.name, icon: p.icon,
+        desc: p.mission, file: p.files?.[0] || p.id, color: p.color,
+      })),
+    });
+  }
+  return layers;
+}
+
+// ═══════════════════════════════════════════════════════
+// PILLARS LIST
+// ═══════════════════════════════════════════════════════
+function renderPillars() {
+  const c = document.getElementById('pillarsView');
+  c.innerHTML = '';
+  D.pillars.forEach(p => {
+    const h = (D.health || {})[p.id] || {};
+    const coverCls = h.test_coverage >= 70 ? 'g' : h.test_coverage >= 40 ? 'a' : h.test_coverage >= 0 ? 'r' : 'gr';
+    const commitCls = h.last_commit_days <= 7 ? 'g' : h.last_commit_days <= 30 ? 'a' : h.last_commit_days >= 0 ? 'r' : 'gr';
+    const todoCls = h.todo_count <= 10 ? 'gr' : h.todo_count <= 25 ? 'a' : 'r';
+    const statusCls = h.status === 'healthy' ? 'g' : h.status === 'stale' ? 'a' : h.status === 'needs-attention' ? 'r' : 'gr';
+    const coverTxt = h.test_coverage >= 0 ? `${h.test_coverage}% cov` : 'no cov data';
+    const commitTxt = h.last_commit_days >= 0 ? `${h.last_commit_days}d ago` : 'no git';
+    const todoTxt = h.todo_count !== undefined ? `${h.todo_count} TODO` : '';
+    const statusTxt = h.status || 'unknown';
+
+    // Traces for this pillar
+    const traces = (D.features || []).filter(f => f.pillar_id === p.id);
+
+    const card = document.createElement('div');
+    card.className = 'pc' + (activePillar === p.id ? ' glow' : '');
+    card.dataset.pid = p.id;
+    card.style.setProperty('--pc', p.color);
+    card.style.setProperty('--pr', hexRgb(p.color));
+    card.onclick = e => { if (!e.target.closest('button')) clickPillar(p.id); };
+    card.innerHTML = `
+      <div class="pc-t">
+        <span class="pc-ic">${p.icon}</span>
+        <span class="pc-nm">${esc(p.name)}</span>
+        <span class="pc-tm">${esc(p.team || '')}</span>
+      </div>
+      <div class="pc-ms">${esc(p.mission)}</div>
+      <div class="hrow">
+        <span class="hb ${coverCls}">${coverTxt}</span>
+        <span class="hb ${commitCls}">${commitTxt}</span>
+        ${todoTxt ? `<span class="hb ${todoCls}">${todoTxt}</span>` : ''}
+        <span class="hb ${statusCls}">${statusTxt}</span>
+        <span class="hb p">${(p.files||[]).length} files</span>
+      </div>
+      <div class="pc-dep">⬇️ <strong style="color:${p.color}">${(p.dependents||[]).length}</strong> downstream · ⬆️ <strong>${(p.depends_on||[]).length}</strong> upstream</div>
+      <div class="pc-btns">
+        ${traces.map(t => `<button class="sb tr" onclick="openTrace('${t.id}',event)">▶ Trace</button>`).join('')}
+        <button class="sb bl" onclick="openBlast('${p.id}',event)">💥 Blast</button>
+      </div>`;
+    c.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// STAGE 2 CTA
+// ═══════════════════════════════════════════════════════
+function renderStage2() {
+  const c = document.getElementById('s2Options');
+  c.innerHTML = '';
+  (D.features_menu || []).forEach((f, i) => {
+    const btn = document.createElement('div');
+    btn.className = 's2b';
+    btn.onclick = () => openTrace(f.id);
+    btn.innerHTML = `
+      <div class="s2n">${i + 1}</div>
+      <div style="flex:1;">
+        <div class="s2l">${esc(f.label)}</div>
+        <div class="s2d">${esc(f.desc)}</div>
+      </div>
+      <span style="color:#c4b5fd;font-size:.75rem;">➔</span>`;
+    c.appendChild(btn);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// MESH VIEW
+// ═══════════════════════════════════════════════════════
+function renderMesh() {
+  const svg = document.getElementById('meshSvg');
+  const mv   = document.getElementById('meshView');
+  svg.innerHTML = '';
+  mv.querySelectorAll('.mn').forEach(n => n.remove());
+
+  const w = mv.clientWidth  || 380;
+  const h = mv.clientHeight || 420;
+  const pos = {};
+  const r = Math.min(w, h) * 0.33;
+  const cx = w / 2, cy = h / 2;
+
+  D.pillars.forEach((p, i) => {
+    const a = (i / D.pillars.length) * 2 * Math.PI - Math.PI / 2;
+    const x = cx + r * Math.cos(a);
+    const y = cy + r * Math.sin(a);
+    pos[p.id] = { x, y };
+
+    const n = document.createElement('div');
+    n.className = 'mn' + (activePillar === p.id ? ' lit' : '');
+    n.dataset.pid = p.id;
+    n.style.left = `${x - 39}px`;
+    n.style.top  = `${y - 33}px`;
+    n.style.setProperty('--pc', p.color);
+    n.style.setProperty('--pr', hexRgb(p.color));
+    n.onclick = () => clickPillar(p.id);
+    n.innerHTML = `<span style="font-size:1.2rem;">${p.icon}</span><span style="font-size:.57rem;font-weight:600;text-align:center;color:#fff;padding:0 3px;line-height:1.1;">${esc(p.name)}</span>`;
+    mv.appendChild(n);
+  });
+
+  // Draw edges
+  (D.edges || []).forEach(e => {
+    const s = pos[e.source], d = pos[e.target];
+    if (!s || !d) return;
+    const mx = (s.x + d.x) / 2 - (d.y - s.y) * 0.2;
+    const my = (s.y + d.y) / 2 + (d.x - s.x) * 0.2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M${s.x} ${s.y} Q${mx} ${my} ${d.x} ${d.y}`);
+    path.setAttribute('stroke', e.color || '#3B82F6');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('stroke-opacity', '0.65');
+    path.setAttribute('fill', 'none');
+    if (e.animated) { path.setAttribute('stroke-dasharray', '5 4'); path.classList.add('ea'); }
+    else path.setAttribute('stroke-dasharray', '3 5');
+    svg.appendChild(path);
+
+    // Protocol label at midpoint
+    const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    txt.setAttribute('x', mx); txt.setAttribute('y', my - 5);
+    txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('font-size', '7.5');
+    txt.setAttribute('fill', e.color || '#3B82F6'); txt.setAttribute('opacity', '0.75');
+    txt.textContent = e.protocol || '';
+    svg.appendChild(txt);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// QUEST VIEW
+// ═══════════════════════════════════════════════════════
+function renderQuest() {
+  const c = document.getElementById('questView');
+  c.innerHTML = '';
+  const quest = D.quest;
+  if (!quest) { c.innerHTML = '<p style="padding:16px;color:var(--mu);font-size:.72rem;">No quest data — re-run scanner.</p>'; return; }
+
+  const total = Object.keys(questState).length;
+  const done  = Object.values(questState).filter(Boolean).length;
+  const pct   = total ? Math.round(done / total * 100) : 0;
+
+  c.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 0 5px;">
+      <span style="font-size:.7rem;font-weight:600;color:#fff;">${esc(quest.title)}</span>
+      <span style="font-size:.6rem;color:var(--mu);font-family:var(--mono);">${done}/${total} · ${pct}%</span>
+    </div>
+    <div class="qpb"><div class="qpf" style="width:${pct}%"></div></div>`;
+
+  (quest.phases || []).forEach(ph => {
+    const ph_el = document.createElement('div');
+    ph_el.className = 'qph';
+    ph_el.innerHTML = `<div class="qphl"><div class="qphd" style="background:${ph.color||'#3B82F6'}"></div><div class="qphn">${esc(ph.label)}</div></div>`;
+    (ph.tasks || []).forEach(t => {
+      const td = document.createElement('div');
+      td.className = 'qt' + (questState[t.id] ? ' dn' : '');
+      td.onclick = () => toggleQuest(t.id);
+      td.innerHTML = `
+        <div class="qtck">${questState[t.id] ? '✓' : ''}</div>
+        <div><div class="qtt">${esc(t.text)}</div><div class="qthi">📄 ${esc(t.file_hint || t.hint || '')}</div></div>`;
+      ph_el.appendChild(td);
+    });
+    c.appendChild(ph_el);
+  });
+}
+
+function toggleQuest(id) {
+  questState[id] = !questState[id];
+  renderQuest();
+  const done = Object.values(questState).filter(Boolean).length;
+  showToast(`Quest: ${done}/${Object.keys(questState).length} complete`);
+}
+
+// ═══════════════════════════════════════════════════════
+// EXECUTION TRACE DRAWER
+// ═══════════════════════════════════════════════════════
+function openTrace(featureId, e) {
+  if (e) e.stopPropagation();
+  const card = (D.features || []).find(f => f.id === featureId);
+  if (!card) { showToast('No trace found: ' + featureId); return; }
+
+  document.getElementById('drTitle').textContent = `⚡ ${card.title}`;
+  document.getElementById('drSub').textContent   = card.description || '';
+  const body = document.getElementById('drBody');
+  body.innerHTML = `
+    <div class="curl">
+      <div class="curl-l">Shell Command</div>
+      <div class="curl-c">${esc(card.command || '')}</div>
+      <div class="stb">${esc(card.http_status || 'READ-ONLY')}</div>
+      ${card.output ? `<div class="curl-o">${esc(card.output)}</div>` : ''}
+    </div>
+    <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);">
+      Execution Path — ${(card.execution_flow || []).length} Steps
+    </div>`;
+
+  (card.execution_flow || []).forEach((s, i) => {
+    const fn  = s.function || s.fn || '';
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div class="step">
+        <span class="step-n">Step ${s.step || i + 1}</span>
+        <div class="step-t">${esc(s.label)}</div>
+        <span class="step-f" onclick="showToast('Jump to: ${esc(s.file)}:${s.line}')">📄 ${esc(s.file)}${s.line ? ':' + s.line : ''}</span>
+        ${fn ? `<div class="step-fn">${esc(fn)}</div>` : ''}
+        <div class="step-d">${esc(s.description)}</div>
+      </div>
+      ${i < (card.execution_flow.length - 1) ? '<div class="arr">▼</div>' : ''}`;
+    body.appendChild(div);
+  });
+
+  document.getElementById('drawer').classList.add('open');
+  highlightPillar(card.pillar_id);
+}
+
+function openFirstTrace() {
+  const first = (D.features_menu || [])[0];
+  if (first) openTrace(first.id);
+}
+
+function closeDrawer() { document.getElementById('drawer').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════
+// BLAST MODAL
+// ═══════════════════════════════════════════════════════
+function openBlast(targetId, e) {
+  if (e) e.stopPropagation();
+  const bd = D.blast_data || {};
+  blastTarget = (targetId && bd[targetId]) ? targetId : Object.keys(bd)[0];
+  renderBlastPills(); renderBlastCard();
+  document.getElementById('blastModal').classList.add('open');
+  document.getElementById('blastOv').classList.add('vis');
+}
+
+function closeBlast() {
+  document.getElementById('blastModal').classList.remove('open');
+  document.getElementById('blastOv').classList.remove('vis');
+}
+
+function renderBlastPills() {
+  const c = document.getElementById('blastPills');
+  c.innerHTML = '';
+  const bd = D.blast_data || {};
+  Object.keys(bd).forEach(key => {
+    const b = document.createElement('button');
+    b.className = 'bpill' + (key === blastTarget ? ' a' : '');
+    b.textContent = bd[key].title || key;
+    b.onclick = () => { blastTarget = key; renderBlastPills(); renderBlastCard(); };
+    c.appendChild(b);
+  });
+}
+
+function renderBlastCard() {
+  const d = (D.blast_data || {})[blastTarget];
+  const c = document.getElementById('blastCard');
+  if (!d) { c.innerHTML = '<p style="color:var(--mu);font-size:.73rem;">No blast data for this pillar.</p>'; return; }
+  const rCls = d.risk_level === 'critical' ? 'rc' : d.risk_level === 'high' ? 'rh' : 'rm';
+  c.innerHTML = `
+    <div class="bmet">
+      <div>
+        <div style="font-size:.8rem;font-weight:700;color:#fff;">${esc(d.title)}</div>
+        <div style="font-size:.63rem;color:var(--mu);margin-top:1px;">Simulating: breaking change or deletion</div>
+      </div>
+      <div class="brisk ${rCls}">Risk: ${d.risk_score}/100 (${(d.risk_level||'').toUpperCase()})</div>
+    </div>
+    <div class="bgrid">
+      <div class="bc"><div class="bc-t">💥 Direct Breakage</div><ul class="bl-">${(d.direct_breakage||[]).map(x=>`<li><span class="wd">✗</span>${esc(x)}</li>`).join('')}</ul></div>
+      <div class="bc"><div class="bc-t">🌊 Downstream Impact</div><ul class="bl-">${(d.downstream_impact||[]).map(x=>`<li><span class="wd">↯</span>${esc(x)}</li>`).join('')}</ul></div>
+      <div class="bc"><div class="bc-t">🗄️ DB Integrity</div><ul class="bl-">${(d.db_integrity||[]).map(x=>`<li><span class="wd">⚠</span>${esc(x)}</li>`).join('')}</ul></div>
+      <div class="bc"><div class="bc-t">🧪 Safety Runbook</div><div style="font-family:var(--mono);font-size:.62rem;color:#a78bfa;line-height:1.4;">${esc(d.safety_tests||'')}</div><div style="font-size:.6rem;color:var(--mu);margin-top:5px;">Contacts: ${esc(d.emergency_contacts||'')}</div></div>
+    </div>`;
+}
+
+function triggerBlastMesh() {
+  closeBlast();
+  switchTab('mesh');
+  setTimeout(() => {
+    document.querySelectorAll('.mn').forEach(n => n.classList.remove('haz','hit'));
+    const srcN = document.querySelector(`.mn[data-pid="${blastTarget}"]`);
+    if (srcN) srcN.classList.add('haz');
+    const p = D.pillars.find(x => x.id === blastTarget);
+    if (p) (p.dependents||[]).forEach(dep => {
+      const el = document.querySelector(`.mn[data-pid="${dep}"]`);
+      if (el) el.classList.add('hit');
+    });
+    showToast('💥 BLAST ACTIVE — Cascading failure simulated!');
+  }, 220);
+}
+
+function copyRunbook() {
+  const d = (D.blast_data || {})[blastTarget];
+  if (!d) return;
+  const txt = `BLAST RADIUS: ${d.title}\nRisk: ${d.risk_score}/100 (${d.risk_level})\nRunbook: ${d.safety_tests}\nContacts: ${d.emergency_contacts}`;
+  navigator.clipboard && navigator.clipboard.writeText(txt);
+  showToast('📋 Runbook copied to clipboard');
+}
+
+// ═══════════════════════════════════════════════════════
+// INTERACTIONS
+// ═══════════════════════════════════════════════════════
+function clickNode(id) {
+  activePillar = id;
+  renderStage(); renderPillars(); renderMesh();
+  document.querySelector(`.pc[data-pid="${id}"]`)?.scrollIntoView({behavior:'smooth',block:'nearest'});
+  showToast('Inspecting: ' + (D.pillars.find(p=>p.id===id)?.name || id));
+}
+
+function clickPillar(id) {
+  activePillar = id;
+  renderStage(); renderPillars(); renderMesh();
+}
+
+function highlightPillar(id) {
+  activePillar = id;
+  renderStage(); renderPillars();
+}
+
+function switchTab(name) {
+  ['pillars','mesh','quest'].forEach(t => {
+    document.getElementById('t' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('a', t === name);
+  });
+  document.getElementById('pillarsView').style.display = name === 'pillars' ? 'flex' : 'none';
+  document.getElementById('meshView').classList.toggle('a',   name === 'mesh');
+  document.getElementById('questView').classList.toggle('a',  name === 'quest');
+  if (name === 'mesh') setTimeout(renderMesh, 40);
+}
+
+function toggleMode() {
+  traceMode = !traceMode;
+  document.getElementById('modeBtn').textContent = traceMode ? 'Flow Trace ▾' : 'Blueprint ▾';
+  showToast(traceMode ? 'Flow Trace Mode' : 'Blueprint Mode');
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════
+function hexRgb(hex) {
+  if (!hex?.startsWith('#')) return '15,98,254';
+  const r = parseInt(hex.slice(1,3),16)||0;
+  const g = parseInt(hex.slice(3,5),16)||0;
+  const b = parseInt(hex.slice(5,7),16)||0;
+  return `${r},${g},${b}`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ── Boot
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>

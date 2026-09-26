@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>/onBob — Architecture Atlas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        /* ─── Modern Bento Design Tokens (Inspired by Reference UI) ─── */
+        :root {
+            --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            /* Light Mode Default (Matches Reference Image) */
+            --bg: #F4F5F8;
+            --surface: #FFFFFF;
+            --surface-subtle: #F9FAFB;
+            --surface-card: #FFFFFF;
+            --border: rgba(0, 0, 0, 0.07);
+            --border-hover: rgba(0, 0, 0, 0.14);
+            --text-primary: #121417;
+            --text-secondary: #64748B;
+            --text-tertiary: #94A3B8;
+
+            /* Reference Color Palette */
+            --lime-accent: #D7F946;
+            --lime-accent-hover: #C5E938;
+            --lime-text: #121417;
+            --lilac-accent: #D7CDFF;
+            --lilac-text: #372A70;
+            --coral-accent: #FFA5A2;
+            --coral-text: #7A2421;
+            --mint-accent: #A5F3D1;
+            --mint-text: #0E5C3E;
+            --sky-accent: #BAE6FD;
+            --sky-text: #0C4A6E;
+
+            --radius-lg: 24px;
+            --radius-md: 18px;
+            --radius-sm: 12px;
+            --radius-pill: 9999px;
+
+            --shadow-subtle: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
+            --shadow-card: 0 10px 30px -4px rgba(0, 0, 0, 0.05);
+            --shadow-glow: 0 8px 24px rgba(215, 249, 70, 0.35);
+        }
+
+        /* Optional Sleek Dark Mode */
+        [data-theme="dark"] {
+            --bg: #0F1015;
+            --surface: #171821;
+            --surface-subtle: #1F212D;
+            --surface-card: #171821;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-tertiary: #64748B;
+
+            --lime-accent: #D7F946;
+            --lime-text: #121417;
+            --lilac-accent: #372A70;
+            --lilac-text: #E3DCFF;
+            --coral-accent: #5C1D1B;
+            --coral-text: #FFBEBA;
+            --mint-accent: #114B33;
+            --mint-text: #A7F3D0;
+            --sky-accent: #0C4A6E;
+            --sky-text: #BAE6FD;
+
+            --shadow-subtle: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+            --shadow-card: 0 10px 30px -4px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 8px 24px rgba(215, 249, 70, 0.2);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* ─── Minimal Header ─────────────────────────────────────────── */
+        .app-header {
+            height: 68px;
+            padding: 0 28px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: var(--lime-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--lime-text);
+            font-size: 1.25rem;
+            font-weight: 800;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .brand-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .brand-title span {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Target Repo Dropdown */
+        .repo-pill-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-pill);
+            padding: 6px 14px;
+            transition: border-color 0.2s;
+        }
+
+        .repo-pill-container:hover {
+            border-color: var(--border-hover);
+        }
+
+        .repo-pill-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-tertiary);
+        }
+
+        .repo-select {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 0.82rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .repo-select option {
+            background: var(--surface);
+            color: var(--text-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pill-btn {
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--surface-subtle);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .pill-btn:hover {
+            background: var(--surface);
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .pill-btn-danger {
+            background: rgba(255, 165, 162, 0.15);
+            border-color: rgba(255, 165, 162, 0.4);
+            color: #E11D48;
+        }
+
+        .pill-btn-danger:hover {
+            background: rgba(255, 165, 162, 0.25);
+            border-color: #E11D48;
+        }
+
+        .theme-toggle-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--surface-subtle);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle-btn:hover {
+            background: var(--surface);
+            border-color: var(--border-hover);
+        }
+
+        /* ─── Main 50 / 50 Balanced Layout ───────────────────────────── */
+        .app-layout {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px 24px;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        /* ─── Bento Column Wrapper ───────────────────────────────────── */
+        .bento-column {
+            display: flex;
+            flex-direction: column;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .column-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+
+        .column-title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .column-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .column-badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill);
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        /* ─── Left Column: Blueprint Layers ──────────────────────────── */
+        .blueprint-scroll-stage {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .blueprint-scroll-stage::-webkit-scrollbar,
+        .pillars-scroll-stage::-webkit-scrollbar,
+        .drawer-body::-webkit-scrollbar,
+        .blast-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .blueprint-scroll-stage::-webkit-scrollbar-thumb,
+        .pillars-scroll-stage::-webkit-scrollbar-thumb,
+        .drawer-body::-webkit-scrollbar-thumb,
+        .blast-body::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.12);
+            border-radius: 3px;
+        }
+
+        [data-theme="dark"] .blueprint-scroll-stage::-webkit-scrollbar-thumb,
+        [data-theme="dark"] .pillars-scroll-stage::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Layer Bento Card */
+        .bento-layer-card {
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .bento-layer-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .bento-layer-card.highlighted {
+            border-color: var(--lime-accent);
+            box-shadow: 0 0 0 2px var(--lime-accent);
+        }
+
+        .layer-top-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .layer-pill-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .layer-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+
+        .layer-items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        /* Clean Component Card */
+        .component-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .component-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .component-card.selected {
+            border-color: var(--text-primary);
+            background: var(--surface);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .component-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .component-icon-wrap {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .component-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.25;
+            flex: 1;
+        }
+
+        .component-desc {
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+            margin-bottom: 12px;
+            flex: 1;
+        }
+
+        .component-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            margin-top: auto;
+        }
+
+        .component-file-chip {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            background: var(--surface-subtle);
+            padding: 3px 8px;
+            border-radius: var(--radius-pill);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            max-width: 170px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .component-arrow {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            transition: transform 0.2s;
+        }
+
+        .component-card:hover .component-arrow {
+            transform: translateX(3px);
+            color: var(--text-primary);
+        }
+
+        /* Flow Connector */
+        .flow-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 2px 0;
+        }
+
+        .flow-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .flow-chip {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 2px 10px;
+            border-radius: var(--radius-pill);
+        }
+
+        /* ─── Right Column: Dependency Mesh & Pillars ────────────────── */
+        /* Segmented Pill Tabs */
+        .tab-pill-group {
+            display: flex;
+            background: var(--surface-subtle);
+            padding: 4px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            gap: 4px;
+        }
+
+        .tab-pill-btn {
+            border: none;
+            background: transparent;
+            font-family: var(--font-sans);
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 6px 16px;
+            border-radius: var(--radius-pill);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab-pill-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-pill-btn.active {
+            background: var(--lime-accent);
+            color: var(--lime-text);
+            font-weight: 700;
+            box-shadow: var(--shadow-glow);
+        }
+
+        /* Mesh Canvas Container */
+        .mesh-view-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 50%, rgba(215, 249, 70, 0.05) 0%, transparent 65%),
+                radial-gradient(circle at 10% 20%, rgba(215, 205, 255, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(186, 230, 253, 0.08) 0%, transparent 40%);
+        }
+
+        .mesh-canvas-stage {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+
+        .mesh-svg-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Bento Mesh Node */
+        .mesh-node-item {
+            position: absolute;
+            width: 110px;
+            height: 88px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 10;
+        }
+
+        .mesh-node-item:hover {
+            transform: scale(1.08) translateY(-2px);
+            border-color: var(--border-hover);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+        }
+
+        .mesh-node-item.selected {
+            border-color: var(--lime-accent);
+            box-shadow: 0 0 0 3px var(--lime-accent), var(--shadow-glow);
+        }
+
+        .mesh-node-icon {
+            font-size: 1.4rem;
+            margin-bottom: 4px;
+        }
+
+        .mesh-node-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .mesh-node-pill {
+            font-size: 0.6rem;
+            font-weight: 600;
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            padding: 1px 6px;
+            border-radius: var(--radius-pill);
+            margin-top: 4px;
+        }
+
+        /* Pillars List View */
+        .pillars-scroll-stage {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .pillars-scroll-stage.active {
+            display: flex;
+        }
+
+        .pillar-bento-card {
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .pillar-bento-card:hover {
+            background: var(--surface);
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .pillar-bento-card.selected {
+            border-color: var(--lime-accent);
+            box-shadow: 0 0 0 2px var(--lime-accent);
+            background: var(--surface);
+        }
+
+        .pillar-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .pillar-heading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .pillar-desc-text {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+            margin-bottom: 12px;
+        }
+
+        .pillar-tag-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .badge-pill {
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill);
+        }
+
+        .badge-pill.lime {
+            background: var(--lime-accent);
+            color: var(--lime-text);
+        }
+
+        .badge-pill.lilac {
+            background: var(--lilac-accent);
+            color: var(--lilac-text);
+        }
+
+        .badge-pill.coral {
+            background: var(--coral-accent);
+            color: var(--coral-text);
+        }
+
+        .badge-pill.subtle {
+            background: var(--surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        /* ─── Bottom Bento Explorer Section (Reference Tasks Style) ──── */
+        .bottom-explorer-card {
+            margin: 14px 20px 20px;
+            padding: 16px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            flex-shrink: 0;
+        }
+
+        .explorer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .explorer-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .explorer-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .explorer-item-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 9px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .explorer-item-btn:hover {
+            border-color: var(--border-hover);
+            transform: translateX(2px);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .item-num-bubble {
+            width: 24px;
+            height: 24px;
+            border-radius: var(--radius-pill);
+            background: var(--lime-accent);
+            color: var(--lime-text);
+            font-size: 0.72rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .item-sub {
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+        }
+
+        /* ─── Drawer: Feature Execution Flow ─────────────────────────── */
+        .exec-drawer {
+            position: fixed;
+            top: 0;
+            right: -560px;
+            bottom: 0;
+            width: 520px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
+            z-index: 200;
+            transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .exec-drawer.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .drawer-close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--surface-subtle);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .drawer-close-btn:hover {
+            background: var(--surface);
+        }
+
+        .drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .trace-step-card {
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            position: relative;
+        }
+
+        .trace-step-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            background: var(--lime-accent);
+            color: var(--lime-text);
+            padding: 2px 8px;
+            border-radius: var(--radius-pill);
+            display: inline-block;
+            margin-bottom: 6px;
+        }
+
+        .trace-step-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .trace-step-file {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: #0284C7;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .trace-step-desc {
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+
+        /* ─── Modal: Blast Radius Simulator ─────────────────────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(8px);
+            z-index: 300;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-window {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.96);
+            width: 90%;
+            max-width: 800px;
+            max-height: 88vh;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+            border-radius: var(--radius-lg);
+            z-index: 310;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-window.open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .blast-pill-options {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .blast-target-btn {
+            font-family: var(--font-sans);
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .blast-target-btn.active {
+            background: var(--coral-accent);
+            color: var(--coral-text);
+            border-color: transparent;
+            font-weight: 700;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: var(--surface-subtle);
+        }
+
+        /* Toast Alert */
+        .toast-bubble {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%) translateY(40px);
+            background: var(--text-primary);
+            color: var(--surface);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 10px 22px;
+            border-radius: var(--radius-pill);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .toast-bubble.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ─── Toast Feedback ───────────────────────────────────────── -->
+    <div class="toast-bubble" id="toast"></div>
+
+    <!-- ─── Minimal Header ───────────────────────────────────────── -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="brand-icon">✱</div>
+            <div class="brand-title">/onBob <span>Atlas</span></div>
+
+            <!-- Target Repo Selector -->
+            <div class="repo-pill-container">
+                <span class="repo-pill-label">Repo</span>
+                <select class="repo-select" id="repoSelector" onchange="switchRepoProfile(this.value)">
+                    <option value="fastapi" selected>tiangolo/full-stack-fastapi-template</option>
+                    <option value="obspy">obspy/obspy (Earthquake Early-Warning)</option>
+                    <option value="workspace">Current Dynamic Workspace (Auto-Detected)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button class="pill-btn pill-btn-danger" onclick="openBlastModal()">
+                💥 Blast Simulator
+            </button>
+            <button class="pill-btn" onclick="triggerStage2Prompt()">
+                🔍 Explore Traces
+            </button>
+            <button class="pill-btn" onclick="window.print()">
+                📤 Export
+            </button>
+            <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+                🌓
+            </button>
+        </div>
+    </header>
+
+    <!-- ─── Main 50 / 50 Balanced Layout ─────────────────────────── -->
+    <main class="app-layout">
+
+        <!-- ─── Left Column: Architectural Blueprint (50%) ────────── -->
+        <section class="bento-column" id="leftBlueprintCol">
+            <div class="column-header">
+                <div class="column-title-group">
+                    <span style="font-size: 1.1rem;">🏛️</span>
+                    <h2 class="column-title">Architectural Blueprint</h2>
+                    <span class="column-badge" id="leftLayersCount">4 Layers</span>
+                </div>
+                <span style="font-size: 0.72rem; color: var(--text-secondary);">Click card to highlight in mesh</span>
+            </div>
+
+            <!-- Blueprint Scroll Stage -->
+            <div class="blueprint-scroll-stage" id="blueprintStage">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+        <!-- ─── Right Column: Dependency Mesh & Pillars (50%) ──────── -->
+        <section class="bento-column" id="rightMeshCol">
+            <div class="column-header">
+                <div class="column-title-group">
+                    <span style="font-size: 1.1rem;">🌐</span>
+                    <h2 class="column-title">Architecture Dynamics</h2>
+                </div>
+
+                <!-- View Switcher Tabs (Dependency Mesh FIRST by default) -->
+                <div class="tab-pill-group">
+                    <button class="tab-pill-btn active" id="tabMesh" onclick="switchRightView('mesh')">
+                        Dependency Mesh
+                    </button>
+                    <button class="tab-pill-btn" id="tabPillars" onclick="switchRightView('pillars')">
+                        Pillars
+                    </button>
+                </div>
+            </div>
+
+            <!-- View 1: Dependency Mesh (Active by Default) -->
+            <div class="mesh-view-container" id="meshView">
+                <div class="mesh-canvas-stage" id="meshCanvas">
+                    <svg class="mesh-svg-canvas" id="meshSvg"></svg>
+                </div>
+            </div>
+
+            <!-- View 2: Pillars List View -->
+            <div class="pillars-scroll-stage" id="pillarsView">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- Bottom Bento Explorer (Reference Tasks Style) -->
+            <div class="bottom-explorer-card" id="bottomExplorer">
+                <div class="explorer-header">
+                    <div class="explorer-title">
+                        <span>⚡</span>
+                        <span>Feature Execution Traces</span>
+                    </div>
+                    <span style="font-size: 0.7rem; color: var(--text-secondary);">Stage 2 Deep-Dive</span>
+                </div>
+                <div class="explorer-items" id="stage2Options">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ─── Drawer: Feature Execution Flow ───────────────────────── -->
+    <div class="exec-drawer" id="execDrawer">
+        <div class="drawer-header">
+            <div>
+                <h3 style="font-size: 0.98rem; font-weight: 700; color: var(--text-primary);" id="drawerTitle">Execution Trace</h3>
+                <p style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">Step-by-step code execution path</p>
+            </div>
+            <button class="drawer-close-btn" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-body" id="drawerBody">
+            <!-- Step cards rendered dynamically -->
+        </div>
+    </div>
+
+    <!-- ─── Modal: Blast Radius Simulator ───────────────────────── -->
+    <div class="modal-overlay" id="blastOverlay" onclick="closeBlastModal()"></div>
+    <div class="modal-window" id="blastModal">
+        <div class="modal-header">
+            <div>
+                <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">💥 Blast Radius Simulator</h3>
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">Simulate downstream breakage if a core component is altered or removed</p>
+            </div>
+            <button class="drawer-close-btn" onclick="closeBlastModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Select Target Component:</div>
+            <div class="blast-pill-options" id="blastPillButtons">
+                <!-- Buttons rendered dynamically -->
+            </div>
+            <div id="blastScorecard">
+                <!-- Details rendered dynamically -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="pill-btn" onclick="copySafetyRunbook()">📋 Copy Safety Runbook</button>
+            <button class="pill-btn pill-btn-danger" onclick="triggerMeshBlastSimulation()">💥 Highlight Affected Mesh</button>
+        </div>
+    </div>
+
+    <!-- ─── Multi-Profile Architecture Data Engine ───────────────── -->
+    <script>
+        const REPO_PROFILES = {
+            fastapi: {
+                repo_name: "tiangolo/full-stack-fastapi-template",
+                file_count: 84,
+                primary_lang: "Python (FastAPI) · TypeScript (React)",
+                layers: [
+                    {
+                        id: "layer_api",
+                        tag: "API Gateway & Ingress",
+                        accent: "#38BDF8",
+                        cards: [
+                            { id: "api-router", name: "FastAPI APIRouter", icon: "🌐", desc: "Routes HTTP endpoints for authentication, user management, and items.", file: "backend/app/api/main.py:12", pillar: "api-gateway" },
+                            { id: "auth-ingress", name: "OAuth2 Password Bearer", icon: "🔐", desc: "Validates JWT bearer tokens and scopes per incoming request.", file: "backend/app/api/deps.py:45", pillar: "identity" }
+                        ]
+                    },
+                    {
+                        id: "layer_logic",
+                        tag: "Domain Services & Core Engine",
+                        accent: "#A78BFA",
+                        cards: [
+                            { id: "crud-items", name: "Items CRUD Service", icon: "📦", desc: "Orchestrates item creation, authorization checks, and business rules.", file: "backend/app/crud/crud_item.py:24", pillar: "core-engine" },
+                            { id: "user-service", name: "User Identity Service", icon: "👤", desc: "Password hashing via passlib bcrypt and email confirmation handlers.", file: "backend/app/crud/crud_user.py:35", pillar: "identity" }
+                        ]
+                    },
+                    {
+                        id: "layer_data",
+                        tag: "Data Persistence & State",
+                        accent: "#34D399",
+                        cards: [
+                            { id: "sqlmodel-db", name: "SQLModel / PostgreSQL Engine", icon: "🗄️", desc: "Async SQLAlchemy database sessions with Alembic migrations.", file: "backend/app/core/db.py:18", pillar: "data-layer" }
+                        ]
+                    },
+                    {
+                        id: "layer_frontend",
+                        tag: "Frontend Client & Shell",
+                        accent: "#FB7185",
+                        cards: [
+                            { id: "react-client", name: "React + Vite SPA", icon: "💻", desc: "Chakra UI dashboard consuming OpenAPI generated client SDK.", file: "frontend/src/routes/_layout/index.tsx", pillar: "frontend-shell" }
+                        ]
+                    }
+                ],
+                pillars: [
+                    { id: "api-gateway", name: "API Gateway", icon: "🌐", mission: "Routes HTTP traffic, validates schemas with Pydantic, and coordinates JWT deps.", color: "#38BDF8", team: "#team_backend", files: ["backend/app/api/main.py"], dependents: ["core-engine", "identity"] },
+                    { id: "identity", name: "Identity & Auth", icon: "🔐", mission: "Manages user credentials, JWT tokens, and OAuth2 security scopes.", color: "#FB7185", team: "#team_security", files: ["backend/app/api/deps.py"], dependents: ["data-layer"] },
+                    { id: "core-engine", name: "Items Core Engine", icon: "📦", mission: "Business logic and permissions governing item lifecycle and tenant isolation.", color: "#A78BFA", team: "#team_products", files: ["backend/app/crud/crud_item.py"], dependents: ["data-layer"] },
+                    { id: "data-layer", name: "PostgreSQL Data Layer", icon: "🗄️", mission: "SQLModel ORM models, session lifecycle, and transactional persistence.", color: "#34D399", team: "#team_db", files: ["backend/app/core/db.py"], dependents: [] },
+                    { id: "frontend-shell", name: "Frontend Client", icon: "💻", mission: "React single-page dashboard with TanStack Query data fetching.", color: "#FBBF24", team: "#team_frontend", files: ["frontend/src/main.tsx"], dependents: ["api-gateway"] }
+                ],
+                features_menu: [
+                    { id: "user_login", num: "1", label: "User Login & JWT Token Issue", desc: "Trace login form submit ➔ OAuth2 password verification ➔ JWT signing." },
+                    { id: "create_item", num: "2", label: "Create & Persist Item", desc: "Trace HTTP POST /items ➔ Pydantic validation ➔ SQLModel save." }
+                ],
+                traces: {
+                    user_login: {
+                        title: "Trace Flow: OAuth2 JWT Login",
+                        steps: [
+                            { title: "HTTP POST /api/v1/login/access-token", file: "backend/app/api/routes/login.py:30", desc: "Validates form credentials against database user records." },
+                            { title: "Bcrypt Hash Verification", file: "backend/app/core/security.py:22", desc: "Verifies salted password hash using passlib." },
+                            { title: "JWT Token Encoding", file: "backend/app/core/security.py:38", desc: "Signs access token with HS256 algorithm and expiration delta." },
+                            { title: "Client Session Hydration", file: "frontend/src/hooks/useAuth.ts:18", desc: "Stores bearer token in localStorage and triggers dashboard route transition." }
+                        ]
+                    },
+                    create_item: {
+                        title: "Trace Flow: Item Creation",
+                        steps: [
+                            { title: "HTTP POST /api/v1/items", file: "backend/app/api/routes/items.py:45", desc: "Pydantic validates payload against ItemCreate schema." },
+                            { title: "Permission Check", file: "backend/app/api/deps.py:60", desc: "Ensures active user has create_item authorization." },
+                            { title: "Database Commit", file: "backend/app/crud/crud_item.py:52", desc: "Persists item record to PostgreSQL using SQLModel session." }
+                        ]
+                    }
+                },
+                blast: {
+                    identity: {
+                        title: "Identity & Auth (backend/app/core/security.py)",
+                        risk_score: 95,
+                        risk_level: "critical",
+                        direct_breakage: [
+                            "deps.py:get_current_user (All authenticated routes throw 401 Unauthorized)",
+                            "login.py:access_token (Users locked out of web app)"
+                        ],
+                        downstream_impact: [
+                            "100% of API endpoints reject client requests",
+                            "Frontend enters continuous redirect loop"
+                        ],
+                        db_integrity: ["User refresh token revocation table uncommitted"],
+                        safety_tests: "pytest backend/app/tests/api/routes/test_login.py",
+                        emergency_contacts: "#team-secops · @auth-lead"
+                    }
+                }
+            },
+            obspy: {
+                repo_name: "obspy/obspy (Earthquake Early-Warning)",
+                file_count: 512,
+                primary_lang: "Python · C (MiniSEED / TauP)",
+                layers: [
+                    {
+                        id: "layer_ingress",
+                        tag: "Ingress & Telemetry IO",
+                        accent: "#38BDF8",
+                        cards: [
+                            { id: "sensor-ingress", name: "MiniSEED Ingress", icon: "📡", desc: "Decodes binary Steim-2 telemetry packets from remote seismic sensor stations.", file: "obspy/io/mseed/core.py:120", pillar: "sensor-ingress" },
+                            { id: "sac-station", name: "SAC Sensor Header", icon: "📟", desc: "Parses station orientation, pole-zero response tables, and geographic coordinates.", file: "obspy/io/sac/core.py:88", pillar: "sensor-ingress" }
+                        ]
+                    },
+                    {
+                        id: "layer_engine",
+                        tag: "Core Signal Processing Engine",
+                        accent: "#A78BFA",
+                        cards: [
+                            { id: "waveform-filter", name: "Waveform Conditioner", icon: "〰️", desc: "4th order zero-phase Butterworth bandpass filter removing cultural noise.", file: "obspy/signal/filter.py:88", pillar: "waveform-filter" },
+                            { id: "event-trigger", name: "STA/LTA P-Wave Trigger", icon: "⚡", desc: "Real-time energy ratio trigger alerting to rapid tectonic shock arrival.", file: "obspy/signal/trigger.py:340", pillar: "event-trigger" }
+                        ]
+                    },
+                    {
+                        id: "layer_domain",
+                        tag: "Earth Velocity & Triangulation",
+                        accent: "#34D399",
+                        cards: [
+                            { id: "epicenter-triangulation", name: "TauP Mantle Velocity Model", icon: "🌍", desc: "IASPEI-91 spherical ray tracing to solve hypocenter depth and epicenter coordinates.", file: "obspy/taup/taup_time.py:95", pillar: "epicenter-triangulation" }
+                        ]
+                    },
+                    {
+                        id: "layer_egress",
+                        tag: "Tectonic Alert & Outbound Egress",
+                        accent: "#FBBF24",
+                        cards: [
+                            { id: "alert-dispatch", name: "Tectonic Alert Exporter", icon: "🚨", desc: "Dispatches CAP XML alerts, ShakeMap raster contours, and train halt signals.", file: "obspy/imaging/scripts/draw_shakemap.py", pillar: "alert-dispatch" }
+                        ]
+                    }
+                ],
+                pillars: [
+                    { id: "sensor-ingress", name: "Sensor Ingress", icon: "📡", mission: "Decodes raw binary telemetry packets from remote seismic sensor stations.", color: "#38BDF8", team: "#team_telemetry", files: ["obspy/io/mseed/core.py"], dependents: ["waveform-filter"] },
+                    { id: "waveform-filter", name: "Waveform Conditioning", icon: "〰️", mission: "Applies Butterworth and bandpass filtering to remove environmental noise.", color: "#A78BFA", team: "#team_dsp", files: ["obspy/signal/filter.py"], dependents: ["event-trigger", "epicenter-triangulation"] },
+                    { id: "event-trigger", name: "P-Wave Event Trigger", icon: "⚡", mission: "STA/LTA coincidence algorithms to flag rapid tectonic shock arrivals.", color: "#FB7185", team: "#team_early_warning", files: ["obspy/signal/trigger.py"], dependents: ["alert-dispatch"] },
+                    { id: "epicenter-triangulation", name: "Earth Model (TauP)", icon: "🌍", mission: "Calculates seismic ray paths through Earth's mantle to solve epicenter coordinates.", color: "#34D399", team: "#team_geophysics", files: ["obspy/taup/taup_time.py"], dependents: ["alert-dispatch"] },
+                    { id: "alert-dispatch", name: "Tectonic Alert Exporter", icon: "🚨", mission: "Dispatches QuakeML broadcasts, Shakemaps, and train emergency halt signals.", color: "#FBBF24", team: "#team_civil_defense", files: ["obspy/imaging/scripts/draw_shakemap.py"], dependents: [] }
+                ],
+                features_menu: [
+                    { id: "sta_lta", num: "1", label: "Compute STA/LTA Seismic Event Trigger", desc: "Trace telemetry ingress ➔ bandpass filtering ➔ energy ratio ➔ emergency broadcast." },
+                    { id: "taup_ray", num: "2", label: "TauP Mantle Velocity Ray Tracing", desc: "Simulate P-wave travel time calculation through spherical Earth velocity discontinuity." }
+                ],
+                traces: {
+                    sta_lta: {
+                        title: "Trace Flow: STA/LTA P-Wave Trigger",
+                        steps: [
+                            { title: "Stream Ingestion", file: "obspy/io/mseed/core.py:120", desc: "Unpacks binary MiniSEED header into continuous 100Hz numpy array." },
+                            { title: "Bandpass Conditioning", file: "obspy/signal/filter.py:88", desc: "4th order zero-phase Butterworth filter eliminates high-frequency noise." },
+                            { title: "Energy Ratio Calculation", file: "obspy/signal/trigger.py:340", desc: "Calculates classic STA/LTA rolling amplitude ratio. Trigger fires at ratio > 8.0." }
+                        ]
+                    }
+                },
+                blast: {
+                    'event-trigger': {
+                        title: 'P-Wave Event Trigger (obspy/signal/trigger.py:340)',
+                        risk_score: 99,
+                        risk_level: 'critical',
+                        direct_breakage: ['trigger.py:coincidence_trigger fails', 'Emergency websocket feed crashes'],
+                        downstream_impact: ['Bullet Train Emergency Braking detection delayed', 'Gas line automatic solenoid valve fails'],
+                        db_integrity: ['QuakeML event catalog corrupted'],
+                        safety_tests: 'pytest obspy/signal/tests/test_trigger.py',
+                        emergency_contacts: '#team-early-warning · @seismo-lead'
+                    }
+                }
+            },
+            workspace: {
+                repo_name: "onBob AI Engine Workspace",
+                file_count: 28,
+                primary_lang: "Python · Markdown · HTML5",
+                layers: [
+                    {
+                        id: "layer_skill",
+                        tag: "Bob Skill Command Ingress",
+                        accent: "#38BDF8",
+                        cards: [
+                            { id: "skill-cmd", name: "/onBob CLI Command", icon: "💬", desc: "Receives user intent, branches between Exploratory and Surgical modes.", file: ".bob/commands/onBob.md", pillar: "skill-ingress" }
+                        ]
+                    },
+                    {
+                        id: "layer_scanner",
+                        tag: "Read-Only Analysis Engine",
+                        accent: "#A78BFA",
+                        cards: [
+                            { id: "scanner-engine", name: "Repo Scanner (AST)", icon: "⚙️", desc: "Zero-token read-only repo scanner clustering files into architectural pillars.", file: "scripts/onBob_scanner.py:45", pillar: "scan-engine" }
+                        ]
+                    },
+                    {
+                        id: "layer_visual",
+                        tag: "Visual Atlas Presentation",
+                        accent: "#34D399",
+                        cards: [
+                            { id: "atlas-renderer", name: "Dynamic Atlas Renderer", icon: "🏛️", desc: "Interactive visualization engine with blast simulation and execution trace drawers.", file: "atlas.html", pillar: "atlas-ui" }
+                        ]
+                    }
+                ],
+                pillars: [
+                    { id: "skill-ingress", name: "Skill Ingress", icon: "💬", mission: "Handles /onBob user prompts and branches into Branch A or Branch B.", color: "#38BDF8", team: "#team_ai", files: [".bob/commands/onBob.md"], dependents: ["scan-engine"] },
+                    { id: "scan-engine", name: "Scan Engine", icon: "⚙️", mission: "Non-destructive read-only repo analysis and dependency mapping.", color: "#A78BFA", team: "#team_core", files: ["scripts/onBob_scanner.py"], dependents: ["atlas-ui"] },
+                    { id: "atlas-ui", name: "Visual Atlas UI", icon: "🏛️", mission: "Standalone visual onboarding web app for newcomers.", color: "#34D399", team: "#team_ux", files: ["atlas.html"], dependents: [] }
+                ],
+                features_menu: [
+                    { id: "run_scan", num: "1", label: "Run Read-Only Codebase Scan", desc: "Execute non-destructive AST scan across repository manifests and files." }
+                ],
+                traces: {
+                    run_scan: {
+                        title: "Trace Flow: Autonomous Workspace Scan",
+                        steps: [
+                            { title: "User Prompt Ingestion", file: ".bob/commands/onBob.md", desc: "User invokes /onBob in Bob chat window." },
+                            { title: "Read-Only AST Scan", file: "scripts/onBob_scanner.py:120", desc: "Inspects file trees and builds architectural pillars." }
+                        ]
+                    }
+                },
+                blast: {
+                    'scan-engine': {
+                        title: 'Scan Engine (scripts/onBob_scanner.py)',
+                        risk_score: 85,
+                        risk_level: 'high',
+                        direct_breakage: ['generate_atlas_payload throws FileNotFoundError if repo path is invalid'],
+                        downstream_impact: ['Bob fails to render the visual atlas for newcomers'],
+                        db_integrity: ['Zero risk (Strict read-only operation guarantee)'],
+                        safety_tests: 'python scripts/onBob_scanner.py . --out test.json',
+                        emergency_contacts: '#team-onBob'
+                    }
+                }
+            }
+        };
+
+        // State Variables
+        let currentProfileKey = 'fastapi';
+        let currentData = REPO_PROFILES[currentProfileKey];
+        let currentRightView = 'mesh'; // Default view is Dependency Mesh per user request!
+        let activePillarId = null;
+        let currentBlastTarget = '';
+
+        // ═════════════════════════════════════════════════════════════
+        // INIT & PROFILE SWITCHING
+        // ═════════════════════════════════════════════════════════════
+        function switchRepoProfile(profileKey) {
+            currentProfileKey = profileKey;
+            currentData = REPO_PROFILES[profileKey] || REPO_PROFILES['fastapi'];
+            activePillarId = null;
+
+            document.getElementById('leftLayersCount').innerText = `${currentData.layers.length} Layers`;
+
+            renderBlueprintStage();
+            renderPillarsList();
+            renderStage2Options();
+            
+            if (currentRightView === 'mesh') {
+                renderMeshView();
+            }
+
+            showToast(`Loaded ${currentData.repo_name}`);
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // RENDER BLUEPRINT (LEFT 50%)
+        // ═════════════════════════════════════════════════════════════
+        function renderBlueprintStage() {
+            const stage = document.getElementById('blueprintStage');
+            stage.innerHTML = '';
+
+            currentData.layers.forEach((layer, layerIdx) => {
+                const layerEl = document.createElement('div');
+                layerEl.className = 'bento-layer-card';
+                layerEl.dataset.layer = layer.id;
+
+                layerEl.innerHTML = `
+                    <div class="layer-top-meta">
+                        <div class="layer-pill-tag">
+                            <span class="layer-dot" style="background: ${layer.accent};"></span>
+                            <span>${layer.tag}</span>
+                        </div>
+                        <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary);">
+                            ${layer.cards.length} Component${layer.cards.length > 1 ? 's' : ''}
+                        </span>
+                    </div>
+                    <div class="layer-items-grid">
+                        ${layer.cards.map(c => `
+                            <div class="component-card ${activePillarId === c.pillar ? 'selected' : ''}"
+                                 onclick="handleNodeCardClick('${c.pillar}')">
+                                <div class="component-header">
+                                    <div class="component-icon-wrap">${c.icon}</div>
+                                    <div class="component-title">${c.name}</div>
+                                </div>
+                                <div class="component-desc">${c.desc}</div>
+                                <div class="component-footer">
+                                    <span class="component-file-chip" title="${c.file}">📄 ${c.file}</span>
+                                    <span class="component-arrow">➔</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                stage.appendChild(layerEl);
+
+                // Directed flow divider between layers
+                if (layerIdx < currentData.layers.length - 1) {
+                    const divider = document.createElement('div');
+                    divider.className = 'flow-divider';
+                    divider.innerHTML = `
+                        <div class="flow-line"></div>
+                        <span class="flow-chip">▼ Directed Flow</span>
+                        <div class="flow-line"></div>
+                    `;
+                    stage.appendChild(divider);
+                }
+            });
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // RENDER RIGHT VIEW SWITCHING (DEFAULT: MESH)
+        // ═════════════════════════════════════════════════════════════
+        function switchRightView(viewName) {
+            currentRightView = viewName;
+            document.getElementById('tabMesh').classList.toggle('active', viewName === 'mesh');
+            document.getElementById('tabPillars').classList.toggle('active', viewName === 'pillars');
+
+            const meshContainer = document.getElementById('meshView');
+            const pillarsContainer = document.getElementById('pillarsView');
+
+            if (viewName === 'mesh') {
+                meshContainer.style.display = 'flex';
+                pillarsContainer.classList.remove('active');
+                setTimeout(renderMeshView, 50);
+            } else {
+                meshContainer.style.display = 'none';
+                pillarsContainer.classList.add('active');
+            }
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // RENDER DEPENDENCY MESH (RIGHT 50%)
+        // ═════════════════════════════════════════════════════════════
+        function renderMeshView() {
+            const svg = document.getElementById('meshSvg');
+            const container = document.getElementById('meshCanvas');
+            svg.innerHTML = '';
+
+            container.querySelectorAll('.mesh-node-item').forEach(n => n.remove());
+
+            const w = container.clientWidth || 500;
+            const h = container.clientHeight || 420;
+            const pillars = currentData.pillars;
+            const positions = {};
+
+            // Balanced circular constellation layout in 50% container
+            const radius = Math.min(w, h) * 0.36;
+            const cx = w / 2;
+            cy = h / 2;
+
+            pillars.forEach((p, idx) => {
+                const angle = (idx / pillars.length) * 2 * Math.PI - Math.PI / 2;
+                const x = cx + radius * Math.cos(angle);
+                const y = cy + radius * Math.sin(angle);
+                positions[p.id] = { x, y };
+
+                const nodeEl = document.createElement('div');
+                nodeEl.className = `mesh-node-item ${activePillarId === p.id ? 'selected' : ''}`;
+                nodeEl.dataset.pillar = p.id;
+                nodeEl.style.left = `${x - 55}px`;
+                nodeEl.style.top = `${y - 44}px`;
+                nodeEl.onclick = () => handlePillarClick(p.id);
+
+                nodeEl.innerHTML = `
+                    <div class="mesh-node-icon">${p.icon}</div>
+                    <div class="mesh-node-label">${p.name}</div>
+                    <div class="mesh-node-pill">${p.dependents.length} deps</div>
+                `;
+                container.appendChild(nodeEl);
+            });
+
+            // Draw clean curved dependency vectors
+            pillars.forEach(p => {
+                const src = positions[p.id];
+                if (!src) return;
+                (p.dependents || []).forEach(depId => {
+                    const dst = positions[depId];
+                    if (!dst) return;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const d = `M ${src.x} ${src.y} Q ${cx} ${cy} ${dst.x} ${dst.y}`;
+                    path.setAttribute('d', d);
+                    path.setAttribute('stroke', p.color || '#94A3B8');
+                    path.setAttribute('stroke-width', activePillarId === p.id ? '3' : '2');
+                    path.setAttribute('stroke-opacity', activePillarId === p.id ? '0.9' : '0.45');
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke-dasharray', '5 5');
+                    svg.appendChild(path);
+                });
+            });
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // RENDER PILLARS VIEW
+        // ═════════════════════════════════════════════════════════════
+        function renderPillarsList() {
+            const container = document.getElementById('pillarsView');
+            container.innerHTML = '';
+
+            currentData.pillars.forEach(p => {
+                const card = document.createElement('div');
+                card.className = `pillar-bento-card ${activePillarId === p.id ? 'selected' : ''}`;
+                card.dataset.pillar = p.id;
+                card.onclick = () => handlePillarClick(p.id);
+
+                card.innerHTML = `
+                    <div class="pillar-top-row">
+                        <div class="pillar-heading">
+                            <span style="font-size: 1.25rem;">${p.icon}</span>
+                            <span>${p.name}</span>
+                        </div>
+                        <span class="badge-pill subtle">${p.team}</span>
+                    </div>
+                    <div class="pillar-desc-text">${p.mission}</div>
+                    <div class="pillar-tag-row">
+                        <span class="badge-pill lime">84% Tests</span>
+                        <span class="badge-pill lilac">${p.files.length} Files</span>
+                        <span class="badge-pill coral">${p.dependents.length} Downstream Dependents</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // RENDER STAGE 2 EXPLORER OPTIONS
+        // ═════════════════════════════════════════════════════════════
+        function renderStage2Options() {
+            const container = document.getElementById('stage2Options');
+            container.innerHTML = '';
+
+            currentData.features_menu.forEach(item => {
+                const btn = document.createElement('div');
+                btn.className = 'explorer-item-btn';
+                btn.onclick = () => openTraceDrawer(item.id);
+
+                btn.innerHTML = `
+                    <div class="item-num-bubble">${item.num}</div>
+                    <div class="item-info">
+                        <div class="item-name">${item.label}</div>
+                        <div class="item-sub">${item.desc}</div>
+                    </div>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">➔</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // INTERACTIVITY & SYNC BETWEEN COLUMNS
+        // ═════════════════════════════════════════════════════════════
+        function handleNodeCardClick(pillarId) {
+            activePillarId = pillarId;
+            renderBlueprintStage();
+            renderPillarsList();
+
+            if (currentRightView === 'mesh') {
+                renderMeshView();
+            }
+
+            const p = currentData.pillars.find(x => x.id === pillarId);
+            showToast(`Inspecting: ${p ? p.name : pillarId}`);
+        }
+
+        function handlePillarClick(pillarId) {
+            activePillarId = pillarId;
+            renderBlueprintStage();
+            renderPillarsList();
+
+            if (currentRightView === 'mesh') {
+                renderMeshView();
+            }
+
+            const card = document.querySelector(`.component-card[data-pillar="${pillarId}"]`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // EXECUTION TRACE DRAWER
+        // ═════════════════════════════════════════════════════════════
+        function openTraceDrawer(featureId) {
+            const trace = currentData.traces[featureId] || Object.values(currentData.traces)[0];
+            if (!trace) return;
+
+            document.getElementById('drawerTitle').innerText = trace.title;
+            const body = document.getElementById('drawerBody');
+            body.innerHTML = '';
+
+            trace.steps.forEach((step, idx) => {
+                const stepEl = document.createElement('div');
+                stepEl.className = 'trace-step-card';
+                stepEl.innerHTML = `
+                    <span class="trace-step-badge">Step ${idx + 1}</span>
+                    <div class="trace-step-title">${step.title}</div>
+                    <span class="trace-step-file">📄 ${step.file}</span>
+                    <div class="trace-step-desc">${step.desc}</div>
+                `;
+                body.appendChild(stepEl);
+            });
+
+            document.getElementById('execDrawer').classList.add('open');
+        }
+
+        function closeDrawer() {
+            document.getElementById('execDrawer').classList.remove('open');
+        }
+
+        function triggerStage2Prompt() {
+            const firstFeature = currentData.features_menu[0];
+            if (firstFeature) openTraceDrawer(firstFeature.id);
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // BLAST RADIUS SIMULATOR MODAL
+        // ═════════════════════════════════════════════════════════════
+        function openBlastModal(targetId) {
+            const blastKeys = Object.keys(currentData.blast || {});
+            currentBlastTarget = targetId && currentData.blast[targetId] ? targetId : blastKeys[0];
+            renderBlastPills();
+            renderBlastDetails();
+            document.getElementById('blastModal').classList.add('open');
+            document.getElementById('blastOverlay').classList.add('visible');
+        }
+
+        function closeBlastModal() {
+            document.getElementById('blastModal').classList.remove('open');
+            document.getElementById('blastOverlay').classList.remove('visible');
+        }
+
+        function renderBlastPills() {
+            const container = document.getElementById('blastPillButtons');
+            container.innerHTML = '';
+            const blastKeys = Object.keys(currentData.blast || {});
+
+            blastKeys.forEach(key => {
+                const pill = document.createElement('button');
+                pill.className = `blast-target-btn ${key === currentBlastTarget ? 'active' : ''}`;
+                pill.innerText = currentData.blast[key].title.split('(')[0].trim();
+                pill.onclick = () => {
+                    currentBlastTarget = key;
+                    renderBlastPills();
+                    renderBlastDetails();
+                };
+                container.appendChild(pill);
+            });
+        }
+
+        function renderBlastDetails() {
+            const card = document.getElementById('blastScorecard');
+            const d = currentData.blast[currentBlastTarget] || Object.values(currentData.blast)[0];
+            if (!d) {
+                card.innerHTML = `<div style="color:var(--text-secondary);font-size:0.8rem;padding:20px;">No blast telemetry defined.</div>`;
+                return;
+            }
+
+            card.innerHTML = `
+                <div style="background:var(--surface-subtle);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;margin-top:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                        <div>
+                            <div style="font-size:0.9rem;font-weight:700;color:var(--text-primary);">${d.title}</div>
+                            <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;">Simulating breaking signature change or deletion</div>
+                        </div>
+                        <span class="badge-pill coral" style="font-weight:700;">Risk Score: ${d.risk_score} / 100</span>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
+                        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;">
+                            <div style="font-size:0.75rem;font-weight:700;color:#E11D48;margin-bottom:6px;">💥 Direct Breakage</div>
+                            <ul style="list-style:none;font-size:0.72rem;color:var(--text-secondary);display:flex;flex-direction:column;gap:4px;">
+                                ${d.direct_breakage.map(item => `<li>✕ ${item}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;">
+                            <div style="font-size:0.75rem;font-weight:700;color:#D97706;margin-bottom:6px;">⚠️ Downstream Impact</div>
+                            <ul style="list-style:none;font-size:0.72rem;color:var(--text-secondary);display:flex;flex-direction:column;gap:4px;">
+                                ${d.downstream_impact.map(item => `<li>! ${item}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function triggerMeshBlastSimulation() {
+            closeBlastModal();
+            switchRightView('mesh');
+            showToast(`💥 Simulating blast impact across connected dependencies!`);
+        }
+
+        function copySafetyRunbook() {
+            const d = currentData.blast[currentBlastTarget];
+            if (!d) return;
+            const text = `SAFETY RUNBOOK FOR: ${d.title}\nRisk: ${d.risk_score}/100\nSafety Tests: ${d.safety_tests}\nContacts: ${d.emergency_contacts}`;
+            navigator.clipboard.writeText(text).then(() => showToast('📋 Safety Runbook copied to clipboard!'));
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // THEME TOGGLE
+        // ═════════════════════════════════════════════════════════════
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            if (currentRightView === 'mesh') renderMeshView();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // BOOT (DEFAULT TO FASTAPI & DEPENDENCY MESH)
+        // ═════════════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', () => {
+            switchRepoProfile('fastapi');
+            switchRightView('mesh'); // Ensure Dependency Mesh is the first view seen on landing
+            window.addEventListener('resize', () => {
+                if (currentRightView === 'mesh') renderMeshView();
+            });
+        });
+    </script>
+</body>
+
+</html>

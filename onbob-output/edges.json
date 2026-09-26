@@ -1,0 +1,79 @@
+{
+  "generated_by": "IBM Bob 2.0",
+  "target_repo": "tiangolo/full-stack-fastapi-template",
+  "edges": [
+    {
+      "id": "edge_frontend_to_gateway",
+      "source": "frontend-shell",
+      "target": "api-gateway",
+      "protocol": "REST",
+      "label": "HTTP requests via OpenAPI client",
+      "color": "#3B82F6",
+      "animated": true,
+      "type": "http"
+    },
+    {
+      "id": "edge_gateway_to_identity",
+      "source": "api-gateway",
+      "target": "identity",
+      "protocol": "REST",
+      "label": "POST /api/v1/login/access-token",
+      "color": "#3B82F6",
+      "animated": true,
+      "type": "http"
+    },
+    {
+      "id": "edge_gateway_to_core",
+      "source": "api-gateway",
+      "target": "core-engine",
+      "protocol": "REST",
+      "label": "GET/POST /api/v1/items/",
+      "color": "#3B82F6",
+      "animated": true,
+      "type": "http"
+    },
+    {
+      "id": "edge_identity_to_db",
+      "source": "identity",
+      "target": "data-layer",
+      "protocol": "SQLModel",
+      "label": "SELECT users WHERE email = ?",
+      "color": "#10B981",
+      "animated": false,
+      "type": "database"
+    },
+    {
+      "id": "edge_core_to_db",
+      "source": "core-engine",
+      "target": "data-layer",
+      "protocol": "SQLModel",
+      "label": "SELECT items WHERE owner_id = ?",
+      "color": "#10B981",
+      "animated": false,
+      "type": "database"
+    }
+  ],
+  "features_menu": [
+    {
+      "id": "auth_login",
+      "label": "🔐 User Authentication",
+      "description": "JWT login flow — POST /api/v1/login/access-token",
+      "pillar_id": "identity",
+      "exec_card_id": "auth_login"
+    },
+    {
+      "id": "items_list",
+      "label": "📦 List Items",
+      "description": "Paginated items — GET /api/v1/items/",
+      "pillar_id": "core-engine",
+      "exec_card_id": "items_list"
+    },
+    {
+      "id": "user_me",
+      "label": "👤 Get Current User",
+      "description": "Profile from JWT — GET /api/v1/users/me",
+      "pillar_id": "identity",
+      "exec_card_id": "user_me"
+    }
+  ]
+}

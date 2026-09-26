@@ -1,0 +1,799 @@
+{
+  "generated_by": "IBM Bob 2.0",
+  "generated_at": "2026-09-26T20:52:29.348800Z",
+  "repo_name": "target-repo",
+  "repo_path": "C:\\Users\\DELL\\pen\\target-repo",
+  "stack": "FastAPI",
+  "primary_lang": "TypeScript",
+  "all_langs": [
+    "TypeScript",
+    "Python"
+  ],
+  "file_count": 194,
+  "entrypoint": "backend/app/main.py",
+  "databases": [
+    "PostgreSQL"
+  ],
+  "pillar_count": 6,
+  "edge_count": 9,
+  "trace_count": 6,
+  "pillars": [
+    {
+      "id": "ingress",
+      "name": "Ingress & API",
+      "icon": "\ud83c\udf10",
+      "mission": "Handles all inbound requests, protocol routing, and entrypoint dispatch.",
+      "team": "#team-backend",
+      "color": "#3B82F6",
+      "rgb": "59,130,246",
+      "files": [
+        "backend/app/api/main.py",
+        "backend/app/api/routes/__init__.py",
+        "backend/app/api/routes/items.py",
+        "backend/app/api/routes/login.py",
+        "backend/app/api/routes/private.py",
+        "backend/app/api/routes/users.py"
+      ],
+      "depends_on": [
+        "infra",
+        "frontend",
+        "data"
+      ],
+      "dependents": [
+        "auth"
+      ]
+    },
+    {
+      "id": "auth",
+      "name": "Auth & Identity",
+      "icon": "\ud83d\udd10",
+      "mission": "Manages authentication, authorization, tokens, and user identity.",
+      "team": "#team-security",
+      "color": "#10B981",
+      "rgb": "16,185,129",
+      "files": [
+        "backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py",
+        "backend/app/core/security.py",
+        "backend/app/email-templates/new_account.html",
+        "backend/app/email-templates/reset_password.html",
+        "backend/tests/crud/test_user.py",
+        "backend/tests/utils/user.py"
+      ],
+      "depends_on": [
+        "data",
+        "infra",
+        "ingress"
+      ],
+      "dependents": []
+    },
+    {
+      "id": "core",
+      "name": "Core Engine",
+      "icon": "\u2699\ufe0f",
+      "mission": "Orchestrates business logic, domain rules, and processing pipelines.",
+      "team": "#team-backend",
+      "color": "#8B5CF6",
+      "rgb": "139,92,246",
+      "files": [
+        "backend/app/crud.py",
+        "backend/tests/crud/__init__.py"
+      ],
+      "depends_on": [
+        "frontend",
+        "data"
+      ],
+      "dependents": []
+    },
+    {
+      "id": "data",
+      "name": "Data & Storage",
+      "icon": "\ud83d\uddc4\ufe0f",
+      "mission": "Owns all database models, migrations, queries, and persistence logic.",
+      "team": "#team-platform",
+      "color": "#F59E0B",
+      "rgb": "245,158,11",
+      "files": [
+        "backend/alembic.ini",
+        "backend/app/alembic/README",
+        "backend/app/alembic/env.py",
+        "backend/app/alembic/script.py.mako",
+        "backend/app/alembic/versions/1a31ce608336_add_cascade_delete_relationships.py",
+        "backend/app/alembic/versions/9c0a54914c78_add_max_length_for_string_varchar_.py"
+      ],
+      "depends_on": [
+        "infra"
+      ],
+      "dependents": [
+        "ingress",
+        "auth",
+        "core"
+      ]
+    },
+    {
+      "id": "frontend",
+      "name": "Frontend",
+      "icon": "\ud83d\udda5\ufe0f",
+      "mission": "Delivers the user interface, client-side state, and API client integration.",
+      "team": "#team-frontend",
+      "color": "#EC4899",
+      "rgb": "236,72,153",
+      "files": [
+        "backend/app/email-templates/test_email.html",
+        "frontend/components.json",
+        "frontend/src/components/Admin/columns.tsx",
+        "frontend/src/components/Common/AuthLayout.tsx",
+        "frontend/src/components/Common/ErrorComponent.tsx",
+        "frontend/src/components/Common/Footer.tsx"
+      ],
+      "depends_on": [],
+      "dependents": [
+        "ingress",
+        "core"
+      ]
+    },
+    {
+      "id": "infra",
+      "name": "Infra & Config",
+      "icon": "\ud83c\udfd7\ufe0f",
+      "mission": "Provides shared utilities, configuration, and deployment infrastructure.",
+      "team": "#team-platform",
+      "color": "#06B6D4",
+      "rgb": "6,182,212",
+      "files": [
+        "backend/Dockerfile",
+        "backend/app/core/config.py",
+        "backend/app/utils.py",
+        "backend/scripts/lint.sh",
+        "backend/scripts/test.sh",
+        "backend/scripts/tests-start.sh"
+      ],
+      "depends_on": [],
+      "dependents": [
+        "ingress",
+        "auth",
+        "data"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_1",
+      "source": "ingress",
+      "target": "infra",
+      "protocol": "Internal Call",
+      "label": "Ingress & API \u2192 Infra & Config",
+      "color": "#3B82F6",
+      "animated": true,
+      "type": "http"
+    },
+    {
+      "id": "edge_2",
+      "source": "ingress",
+      "target": "frontend",
+      "protocol": "Internal Call",
+      "label": "Ingress & API \u2192 Frontend",
+      "color": "#3B82F6",
+      "animated": true,
+      "type": "http"
+    },
+    {
+      "id": "edge_3",
+      "source": "ingress",
+      "target": "data",
+      "protocol": "SQLModel/ORM",
+      "label": "Ingress & API \u2192 Data & Storage",
+      "color": "#10B981",
+      "animated": false,
+      "type": "database"
+    },
+    {
+      "id": "edge_4",
+      "source": "auth",
+      "target": "data",
+      "protocol": "SQLModel/ORM",
+      "label": "Auth & Identity \u2192 Data & Storage",
+      "color": "#10B981",
+      "animated": false,
+      "type": "database"
+    },
+    {
+      "id": "edge_5",
+      "source": "auth",
+      "target": "infra",
+      "protocol": "Internal Call",
+      "label": "Auth & Identity \u2192 Infra & Config",
+      "color": "#3B82F6",
+      "animated": true,
+      "type": "http"
+    },
+    {
+      "id": "edge_6",
+      "source": "auth",
+      "target": "ingress",
+      "protocol": "Internal Call",
+      "label": "Auth & Identity \u2192 Ingress & API",
+      "color": "#3B82F6",
+      "animated": true,
+      "type": "http"
+    },
+    {
+      "id": "edge_7",
+      "source": "core",
+      "target": "frontend",
+      "protocol": "Internal Call",
+      "label": "Core Engine \u2192 Frontend",
+      "color": "#3B82F6",
+      "animated": true,
+      "type": "http"
+    },
+    {
+      "id": "edge_8",
+      "source": "core",
+      "target": "data",
+      "protocol": "SQLModel/ORM",
+      "label": "Core Engine \u2192 Data & Storage",
+      "color": "#10B981",
+      "animated": false,
+      "type": "database"
+    },
+    {
+      "id": "edge_9",
+      "source": "data",
+      "target": "infra",
+      "protocol": "Internal Call",
+      "label": "Data & Storage \u2192 Infra & Config",
+      "color": "#3B82F6",
+      "animated": true,
+      "type": "http"
+    }
+  ],
+  "features_menu": [
+    {
+      "id": "feat_ingress",
+      "num": "1",
+      "label": "\ud83c\udf10 Request Lifecycle",
+      "desc": "Trace inbound request \u2192 routing \u2192 response dispatch.",
+      "pillar_id": "ingress"
+    },
+    {
+      "id": "feat_auth",
+      "num": "2",
+      "label": "\ud83d\udd10 Authentication Flow",
+      "desc": "Trace login \u2192 token issue \u2192 session validation.",
+      "pillar_id": "auth"
+    },
+    {
+      "id": "feat_core",
+      "num": "3",
+      "label": "\u2699\ufe0f Core Business Logic",
+      "desc": "Trace domain logic \u2192 data transformation \u2192 result.",
+      "pillar_id": "core"
+    },
+    {
+      "id": "feat_data",
+      "num": "4",
+      "label": "\ud83d\uddc4\ufe0f Data Persistence Layer",
+      "desc": "Trace query \u2192 ORM model \u2192 database write \u2192 response.",
+      "pillar_id": "data"
+    },
+    {
+      "id": "feat_frontend",
+      "num": "5",
+      "label": "\ud83d\udda5\ufe0f Client Data Fetch",
+      "desc": "Trace UI action \u2192 API call \u2192 state update \u2192 render.",
+      "pillar_id": "frontend"
+    },
+    {
+      "id": "feat_infra",
+      "num": "6",
+      "label": "\ud83c\udfd7\ufe0f Infrastructure Setup",
+      "desc": "Trace config load \u2192 middleware \u2192 app bootstrap.",
+      "pillar_id": "infra"
+    }
+  ],
+  "features": [
+    {
+      "id": "feat_ingress",
+      "pillar_id": "ingress",
+      "title": "Trace: Ingress & API",
+      "description": "Handles all inbound requests, protocol routing, and entrypoint dispatch.",
+      "command": "npm test",
+      "output": "[Static analysis \u2014 run Bob Layer 3 for live output]",
+      "http_status": "READ-ONLY",
+      "execution_flow": [
+        {
+          "step": 1,
+          "label": "Entrypoint: Main",
+          "file": "backend/app/api/main.py",
+          "line": 1,
+          "function": "main()",
+          "description": "Discovered in main.py via static analysis."
+        },
+        {
+          "step": 2,
+          "label": "Core Logic:   Init  ",
+          "file": "backend/app/api/routes/__init__.py",
+          "line": 1,
+          "function": "__init__()",
+          "description": "Discovered in __init__.py via static analysis."
+        },
+        {
+          "step": 3,
+          "label": "Data Access: Items",
+          "file": "backend/app/api/routes/items.py",
+          "line": 14,
+          "function": "read_items()",
+          "description": "Discovered in items.py via static analysis."
+        },
+        {
+          "step": 4,
+          "label": "Response / Output: Login",
+          "file": "backend/app/api/routes/login.py",
+          "line": 24,
+          "function": "login_access_token()",
+          "description": "Discovered in login.py via static analysis."
+        }
+      ]
+    },
+    {
+      "id": "feat_auth",
+      "pillar_id": "auth",
+      "title": "Trace: Auth & Identity",
+      "description": "Manages authentication, authorization, tokens, and user identity.",
+      "command": "npm test",
+      "output": "[Static analysis \u2014 run Bob Layer 3 for live output]",
+      "http_status": "READ-ONLY",
+      "execution_flow": [
+        {
+          "step": 1,
+          "label": "Entrypoint: Fe56Fa70289E Add Created At To User And Item",
+          "file": "backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py",
+          "line": 20,
+          "function": "upgrade()",
+          "description": "Discovered in fe56fa70289e_add_created_at_to_user_and_item.py via static analysis."
+        },
+        {
+          "step": 2,
+          "label": "Core Logic: Security",
+          "file": "backend/app/core/security.py",
+          "line": 22,
+          "function": "create_access_token()",
+          "description": "Discovered in security.py via static analysis."
+        },
+        {
+          "step": 3,
+          "label": "Data Access: New Account",
+          "file": "backend/app/email-templates/new_account.html",
+          "line": 1,
+          "function": "new_account()",
+          "description": "Discovered in new_account.html via static analysis."
+        },
+        {
+          "step": 4,
+          "label": "Response / Output: Reset Password",
+          "file": "backend/app/email-templates/reset_password.html",
+          "line": 1,
+          "function": "reset_password()",
+          "description": "Discovered in reset_password.html via static analysis."
+        }
+      ]
+    },
+    {
+      "id": "feat_core",
+      "pillar_id": "core",
+      "title": "Trace: Core Engine",
+      "description": "Orchestrates business logic, domain rules, and processing pipelines.",
+      "command": "npm test",
+      "output": "[Static analysis \u2014 run Bob Layer 3 for live output]",
+      "http_status": "READ-ONLY",
+      "execution_flow": [
+        {
+          "step": 1,
+          "label": "Entrypoint: Crud",
+          "file": "backend/app/crud.py",
+          "line": 10,
+          "function": "create_user()",
+          "description": "Discovered in crud.py via static analysis."
+        },
+        {
+          "step": 2,
+          "label": "Core Logic:   Init  ",
+          "file": "backend/tests/crud/__init__.py",
+          "line": 1,
+          "function": "__init__()",
+          "description": "Discovered in __init__.py via static analysis."
+        }
+      ]
+    },
+    {
+      "id": "feat_data",
+      "pillar_id": "data",
+      "title": "Trace: Data & Storage",
+      "description": "Owns all database models, migrations, queries, and persistence logic.",
+      "command": "npm test",
+      "output": "[Static analysis \u2014 run Bob Layer 3 for live output]",
+      "http_status": "READ-ONLY",
+      "execution_flow": [
+        {
+          "step": 1,
+          "label": "Entrypoint: Alembic",
+          "file": "backend/alembic.ini",
+          "line": 1,
+          "function": "alembic()",
+          "description": "Discovered in alembic.ini via static analysis."
+        },
+        {
+          "step": 2,
+          "label": "Core Logic: Readme",
+          "file": "backend/app/alembic/README",
+          "line": 1,
+          "function": "README()",
+          "description": "Discovered in README via static analysis."
+        },
+        {
+          "step": 3,
+          "label": "Data Access: Env",
+          "file": "backend/app/alembic/env.py",
+          "line": 33,
+          "function": "get_url()",
+          "description": "Discovered in env.py via static analysis."
+        },
+        {
+          "step": 4,
+          "label": "Response / Output: Script.Py",
+          "file": "backend/app/alembic/script.py.mako",
+          "line": 20,
+          "function": "upgrade()",
+          "description": "Discovered in script.py.mako via static analysis."
+        }
+      ]
+    },
+    {
+      "id": "feat_frontend",
+      "pillar_id": "frontend",
+      "title": "Trace: Frontend",
+      "description": "Delivers the user interface, client-side state, and API client integration.",
+      "command": "npm test",
+      "output": "[Static analysis \u2014 run Bob Layer 3 for live output]",
+      "http_status": "READ-ONLY",
+      "execution_flow": [
+        {
+          "step": 1,
+          "label": "Entrypoint: Test Email",
+          "file": "backend/app/email-templates/test_email.html",
+          "line": 1,
+          "function": "test_email()",
+          "description": "Discovered in test_email.html via static analysis."
+        },
+        {
+          "step": 2,
+          "label": "Core Logic: Components",
+          "file": "frontend/components.json",
+          "line": 1,
+          "function": "components()",
+          "description": "Discovered in components.json via static analysis."
+        },
+        {
+          "step": 3,
+          "label": "Data Access: Columns",
+          "file": "frontend/src/components/Admin/columns.tsx",
+          "line": 1,
+          "function": "columns()",
+          "description": "Discovered in columns.tsx via static analysis."
+        },
+        {
+          "step": 4,
+          "label": "Response / Output: Authlayout",
+          "file": "frontend/src/components/Common/AuthLayout.tsx",
+          "line": 1,
+          "function": "AuthLayout()",
+          "description": "Discovered in AuthLayout.tsx via static analysis."
+        }
+      ]
+    },
+    {
+      "id": "feat_infra",
+      "pillar_id": "infra",
+      "title": "Trace: Infra & Config",
+      "description": "Provides shared utilities, configuration, and deployment infrastructure.",
+      "command": "npm test",
+      "output": "[Static analysis \u2014 run Bob Layer 3 for live output]",
+      "http_status": "READ-ONLY",
+      "execution_flow": [
+        {
+          "step": 1,
+          "label": "Entrypoint: Dockerfile",
+          "file": "backend/Dockerfile",
+          "line": 1,
+          "function": "Dockerfile()",
+          "description": "Discovered in Dockerfile via static analysis."
+        },
+        {
+          "step": 2,
+          "label": "Core Logic: Config",
+          "file": "backend/app/core/config.py",
+          "line": 35,
+          "function": "Settings()",
+          "description": "Discovered in config.py via static analysis."
+        },
+        {
+          "step": 3,
+          "label": "Data Access: Utils",
+          "file": "backend/app/utils.py",
+          "line": 25,
+          "function": "render_email_template()",
+          "description": "Discovered in utils.py via static analysis."
+        },
+        {
+          "step": 4,
+          "label": "Response / Output: Lint",
+          "file": "backend/scripts/lint.sh",
+          "line": 1,
+          "function": "lint()",
+          "description": "Discovered in lint.sh via static analysis."
+        }
+      ]
+    }
+  ],
+  "health": {
+    "ingress": {
+      "test_coverage": 24,
+      "last_commit_days": 28,
+      "todo_count": 0,
+      "file_count": 49,
+      "status": "healthy",
+      "test_files": 6
+    },
+    "auth": {
+      "test_coverage": 58,
+      "last_commit_days": 28,
+      "todo_count": 0,
+      "file_count": 24,
+      "status": "healthy",
+      "test_files": 7
+    },
+    "core": {
+      "test_coverage": 100,
+      "last_commit_days": 28,
+      "todo_count": 0,
+      "file_count": 2,
+      "status": "healthy",
+      "test_files": 1
+    },
+    "data": {
+      "test_coverage": -1,
+      "last_commit_days": 28,
+      "todo_count": 0,
+      "file_count": 12,
+      "status": "healthy",
+      "test_files": 0
+    },
+    "frontend": {
+      "test_coverage": 8,
+      "last_commit_days": 28,
+      "todo_count": 0,
+      "file_count": 52,
+      "status": "healthy",
+      "test_files": 2
+    },
+    "infra": {
+      "test_coverage": 86,
+      "last_commit_days": 28,
+      "todo_count": 0,
+      "file_count": 28,
+      "status": "healthy",
+      "test_files": 12
+    }
+  },
+  "blast_data": {
+    "ingress": {
+      "title": "Ingress & API",
+      "pillar_id": "ingress",
+      "risk_score": 84,
+      "risk_level": "high",
+      "direct_breakage": [
+        "auth: callers of Ingress & API lose this dependency"
+      ],
+      "downstream_impact": [
+        "All 1 downstream pillar(s) affected",
+        "49 files become unreachable"
+      ],
+      "db_integrity": [
+        "No active transactions at risk"
+      ],
+      "safety_tests": "Run: pytest backend/tests/api/routes/__init__.py",
+      "emergency_contacts": "#team-backend"
+    },
+    "auth": {
+      "title": "Auth & Identity",
+      "pillar_id": "auth",
+      "risk_score": 61,
+      "risk_level": "moderate",
+      "direct_breakage": [
+        "Internal callers of Auth & Identity module break"
+      ],
+      "downstream_impact": [
+        "No downstream pillars detected",
+        "24 files become unreachable"
+      ],
+      "db_integrity": [
+        "No active transactions at risk"
+      ],
+      "safety_tests": "Run: pytest backend/tests/crud/test_user.py",
+      "emergency_contacts": "#team-security"
+    },
+    "core": {
+      "title": "Core Engine",
+      "pillar_id": "core",
+      "risk_score": 50,
+      "risk_level": "moderate",
+      "direct_breakage": [
+        "Internal callers of Core Engine module break"
+      ],
+      "downstream_impact": [
+        "No downstream pillars detected",
+        "2 files become unreachable"
+      ],
+      "db_integrity": [
+        "No active transactions at risk"
+      ],
+      "safety_tests": "Run: pytest backend/tests/crud/__init__.py",
+      "emergency_contacts": "#team-backend"
+    },
+    "data": {
+      "title": "Data & Storage",
+      "pillar_id": "data",
+      "risk_score": 86,
+      "risk_level": "high",
+      "direct_breakage": [
+        "ingress: callers of Data & Storage lose this dependency",
+        "auth: callers of Data & Storage lose this dependency",
+        "core: callers of Data & Storage lose this dependency"
+      ],
+      "downstream_impact": [
+        "All 3 downstream pillar(s) affected",
+        "12 files become unreachable"
+      ],
+      "db_integrity": [
+        "In-flight transactions may be uncommitted",
+        "Connection pool may exhaust"
+      ],
+      "safety_tests": "No test files found in Data & Storage \u2014 add coverage before changing",
+      "emergency_contacts": "#team-platform"
+    },
+    "frontend": {
+      "title": "Frontend",
+      "pillar_id": "frontend",
+      "risk_score": 99,
+      "risk_level": "critical",
+      "direct_breakage": [
+        "ingress: callers of Frontend lose this dependency",
+        "core: callers of Frontend lose this dependency"
+      ],
+      "downstream_impact": [
+        "All 2 downstream pillar(s) affected",
+        "52 files become unreachable"
+      ],
+      "db_integrity": [
+        "No active transactions at risk"
+      ],
+      "safety_tests": "Run: npm test -- backend/app/email-templates/test_email.html",
+      "emergency_contacts": "#team-frontend"
+    },
+    "infra": {
+      "title": "Infra & Config",
+      "pillar_id": "infra",
+      "risk_score": 88,
+      "risk_level": "critical",
+      "direct_breakage": [
+        "ingress: callers of Infra & Config lose this dependency",
+        "auth: callers of Infra & Config lose this dependency",
+        "data: callers of Infra & Config lose this dependency"
+      ],
+      "downstream_impact": [
+        "All 3 downstream pillar(s) affected",
+        "28 files become unreachable"
+      ],
+      "db_integrity": [
+        "In-flight transactions may be uncommitted",
+        "Connection pool may exhaust"
+      ],
+      "safety_tests": "Run: npm test -- backend/scripts/test.sh",
+      "emergency_contacts": "#team-platform"
+    }
+  },
+  "quest": {
+    "generated_by": "IBM Bob 2.0",
+    "title": "target-repo Onboarding Quest",
+    "estimated_hours": 12,
+    "phases": [
+      {
+        "id": "day1",
+        "label": "Day 1 \u2014 Get it Running",
+        "color": "#3B82F6",
+        "tasks": [
+          {
+            "id": "q_clone",
+            "text": "Clone and start target-repo: npm install && npm run dev",
+            "pillar_id": "ingress",
+            "file_hint": "backend/app/main.py"
+          },
+          {
+            "id": "q_entry",
+            "text": "Read the entrypoint: backend/app/main.py",
+            "pillar_id": "ingress",
+            "file_hint": "backend/app/main.py"
+          },
+          {
+            "id": "q_readme",
+            "text": "Read README.md end-to-end",
+            "pillar_id": "",
+            "file_hint": "README.md"
+          }
+        ]
+      },
+      {
+        "id": "week1",
+        "label": "Week 1 \u2014 Understand the Architecture",
+        "color": "#10B981",
+        "tasks": [
+          {
+            "id": "q_ingress_read",
+            "text": "Read the Ingress & API pillar: main.py, __init__.py",
+            "pillar_id": "ingress",
+            "file_hint": "backend/app/api/main.py"
+          },
+          {
+            "id": "q_auth_read",
+            "text": "Read the Auth & Identity pillar: fe56fa70289e_add_created_at_to_user_and_item.py, security.py",
+            "pillar_id": "auth",
+            "file_hint": "backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py"
+          },
+          {
+            "id": "q_core_read",
+            "text": "Read the Core Engine pillar: crud.py, __init__.py",
+            "pillar_id": "core",
+            "file_hint": "backend/app/crud.py"
+          },
+          {
+            "id": "q_data_read",
+            "text": "Read the Data & Storage pillar: alembic.ini, README",
+            "pillar_id": "data",
+            "file_hint": "backend/alembic.ini"
+          },
+          {
+            "id": "q_tests",
+            "text": "Run the full test suite and understand coverage gaps",
+            "pillar_id": "",
+            "file_hint": "tests/"
+          }
+        ]
+      },
+      {
+        "id": "month1",
+        "label": "Month 1 \u2014 Own a Feature",
+        "color": "#8B5CF6",
+        "tasks": [
+          {
+            "id": "q_ingress_feat",
+            "text": "Add a small feature or fix to Ingress & API",
+            "pillar_id": "ingress",
+            "file_hint": "backend/app/api/main.py"
+          },
+          {
+            "id": "q_auth_feat",
+            "text": "Add a small feature or fix to Auth & Identity",
+            "pillar_id": "auth",
+            "file_hint": "backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py"
+          },
+          {
+            "id": "q_pr",
+            "text": "Open your first PR and get it reviewed",
+            "pillar_id": "",
+            "file_hint": "CONTRIBUTING.md"
+          }
+        ]
+      }
+    ]
+  }
+}
