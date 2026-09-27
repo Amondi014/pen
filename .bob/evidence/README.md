@@ -1,27 +1,27 @@
-# Hackathon Evidence — Bob Session Screenshots
+# Hackathon Evidence — IBM Bob Session Screenshots
 
-This folder must contain screenshots of IBM Bob 2.0 sessions demonstrating the onBob workflow.
+This folder contains screenshots of IBM Bob 2.0 sessions demonstrating the onBob workflow,
+as required for hackathon judging.
 
-## Required Files
+## Committed Evidence
+
+| File | What it shows |
+|------|--------------|
+| `onBob-building-stage.png` | Bob session — building the onBob template and skill |
+| `onBob-testing.png` | Bob session — testing the atlas generation against a real repo |
+
+## Additional Evidence to Capture (if time permits)
 
 | Filename | What to capture |
-|---|---|
-| `layer1-bob-session.png` | Bob chat showing Layer 1 scan completing — `pillars.json` and `health.json` written |
-| `layer3-bob-session.png` | Bob chat showing Layer 3 trace completing — `execution-cards.json` written with `file:line` entries |
-| `demo-bob-session.png` | Full demo run — Bob chat showing all 3 layers completing end-to-end |
+|----------|----------------|
+| `onBob-scan-duckdb.png` | Bob chat showing `/onBob` completing against the DuckDB repo |
+| `onBob-atlas-open.png` | Atlas HTML open in browser showing the force-graph |
+| `onBob-feature-trace.png` | Feature flow playback / execution trace drawer open |
 
 ## How to Capture
 
-1. Run each layer prompt from the README in IBM Bob 2.0
+1. Run `/onBob` inside IBM Bob with a target repo in the workspace
 2. When Bob finishes and prints its summary, take a full-window screenshot
-3. Save the screenshot here with the exact filename listed above
-
-## Example Layer 1 Prompt
-
-```
-Execute the onBob Layer 1 scan using the skill defined in .bob/commands/scan.md
-Target repository: target-repo/
-Output directory: onbob-output/
-```
+3. Save here with a descriptive filename
 
 *These screenshots are required for hackathon judging.*

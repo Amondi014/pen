@@ -120,3 +120,11 @@ build/
 # ============================================
 # onBob: target repository (cloned externally, not part of this project)
 target-repo/
+
+# onBob: DuckDB cloned repo (read-only scan target, not part of submission)
+duckdb/
+
+# onBob: generated output — track the atlas HTML, ignore large intermediates
+!onbob-output/
+!onbob-output/architecture-atlas.html
+!onbob-output/README.md

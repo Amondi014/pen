@@ -1,5 +1,5 @@
 ---
-description: "onBob: Scan any repository and generate a self-contained Architectural Atlas — interactive HTML viewer with pillar mesh, execution traces, health badges, onboarding quest, and blast radius simulator."
+description: "onBob: Autonomously scan any repository and generate a self-contained Architectural Atlas — interactive HTML force-graph with pillar mesh, animated feature flows, execution traces, blast radius simulator, and keyboard shortcuts."
 ---
 
 # /onBob — Architectural Atlas Generator
@@ -13,115 +13,72 @@ description: "onBob: Scan any repository and generate a self-contained Architect
 
 ```
 /onBob                        # Full scan — map entire repo
-/onBob [feature]              # Surgical trace — focus on one feature
+/onBob — target: path/to/dir  # Scan a specific sub-directory or cloned repo
+/onBob [feature keyword]      # Surgical trace — focus on one feature
 ```
 
 ---
 
 ## What Bob Does
 
-When `/onBob` is triggered, Bob executes the following pipeline **autonomously**:
+Bob executes this pipeline **autonomously** and **read-only** using only native file tools.
+No shell scripts. No external dependencies.
 
-### Step 1 — Pre-flight
-```bash
-python scripts/preflight.py
+### Step 1 — Scan
+Bob uses `glob`, `grep`, `list_files`, `read_file`, `GetSymbolsOverview`, and `FindSymbol`
+to inspect the repository. No more than 200 files are read. Priority order:
+1. Manifests / package files (identify language and framework)
+2. Entry points (main, app, index, router)
+3. Model / schema / migration files
+4. Auth / security / middleware
+5. Storage / database / ORM files
+6. Key API route files
+
+### Step 2 — Build `window.__ONBOB_DATA__`
+Bob constructs the full data payload as a `<script>` block.
+See `.bob/skills/onBob/SKILL.md` for the complete data contract schema.
+
+### Step 3 — Inject & Write
+Bob reads `.bob/template.html`, inserts the `window.__ONBOB_DATA__` script block immediately
+**before** the `<!-- ─── Repo Data Injection Point -->` comment, and writes the output to:
+
 ```
-Checks Python version, required libs (no external deps needed), and confirms the workspace is readable.
-
-### Step 2 — Scan & Generate `atlas_data.json`
-```bash
-python scripts/onBob_scanner.py . --out onbob-output
-```
-Or for a specific sub-folder / cloned target repo:
-```bash
-python scripts/onBob_scanner.py target-repo --out onbob-output
+onbob-output/architecture-atlas.html
 ```
 
-This single command writes `onbob-output/atlas_data.json` containing:
-- **Pillars** — codebase clustered into 4–6 architectural domains via keyword + import analysis
-- **Edges** — directed dependency graph between pillars
-- **Features menu** — Stage 2 "Which feature?" options
-- **Execution traces** — static file:line trace per feature (Layer 3)
-- **Health metrics** — test coverage, commit freshness, TODO count per pillar
-- **Blast radius** — impact simulation per pillar
-- **Onboarding quest** — structured learning path generated from the codebase
+The master template `.bob/template.html` is **never modified**.
 
-### Step 3 — Serve the Atlas
-```bash
-python -m http.server 3000 --directory onbob-output
+---
+
+## After Generation — Chat Summary
+
+Bob prints this to chat after writing the file:
+
 ```
-Open: http://localhost:3000/architecture-atlas.html
+[onBob] Atlas generated → onbob-output/architecture-atlas.html
 
-The atlas is a **zero-dependency, self-contained HTML file** that reads `atlas_data.json` at boot.
-It requires an HTTP server (not `file://`) due to the `fetch()` call.
+  Repo     : <repo-name>
+  Language : <primary language(s)>
+  Files    : <file count>
+  Pillars  : N    Edges: N    Features: N
+
+Open onbob-output/architecture-atlas.html in any browser — no server needed.
+
+Which feature would you like to trace in depth?
+
+  1. <Feature 1 label>
+  2. <Feature 2 label>
+  3. <Feature 3 label>
+
+Reply with a number or /onBob [feature keyword]
+```
 
 ---
 
 ## STRICT CONSTRAINTS
 
-1. **Read-Only** — never modify, delete, or commit any file in the target repo
-2. **Max 200 files read** per scan — scanner already enforces this
-3. **Output only to `onbob-output/`** — never write to the target repo itself
-4. **If the app is not running** — scanner still works (static analysis only); Layer 3 traces use pre-seeded fallbacks
-
----
-
-## Stage 2 CTA — "Which Feature?"
-
-After the atlas renders, Bob prints this menu in chat (pulled from `atlas_data.json`):
-
-```
-[onBob] Scan complete.
-
-  Repo    : full-stack-fastapi-template
-  Stack   : FastAPI · TypeScript
-  Pillars : 6     Edges: 8     Traces: 6
-  Atlas   : http://localhost:3000/architecture-atlas.html
-
-Which feature would you like to trace in depth?
-
-  1. Request Lifecycle — inbound request -> routing -> response
-  2. Authentication Flow — login -> token issue -> session
-  3. Core Business Logic — domain logic -> data transform
-  4. Data Persistence — query -> ORM -> database write
-  5. Client Data Fetch — UI action -> API call -> render
-
-Reply with a number, or type: /onBob [feature keyword]
-```
-
----
-
-## Layer 3 — Feature Trace (Branch B)
-
-```
-/onBob auth
-```
-
-Bob reads `onbob-output/atlas_data.json`, finds all features matching "auth", opens the trace drawer in the atlas, and prints the execution flow to chat with clickable `file:line` references.
-
----
-
-## Output Files
-
-| File | Description |
-|------|-------------|
-| `onbob-output/atlas_data.json` | Single source of truth — all scanner output |
-| `onbob-output/architecture-atlas.html` | Interactive viewer (reads atlas_data.json) |
-| `onbob-output/AGENTS.md` *(legacy)* | Human-readable repo index |
-
----
-
-## Target Repo Demo
-
-```bash
-git clone --depth=1 https://github.com/tiangolo/full-stack-fastapi-template target-repo
-python scripts/onBob_scanner.py target-repo --out onbob-output
-python -m http.server 3000 --directory onbob-output
-# -> http://localhost:3000/architecture-atlas.html
-```
-
-This repo (~30k stars, FastAPI + React, PostgreSQL) produces:
-- 6 architectural pillars (Ingress, Auth, Core, Data, Frontend, Infra)
-- 8 dependency edges
-- 6 feature execution traces
-- Full health + quest + blast radius data
+1. **Read-Only** — never modify, delete, or write any file inside the target repo
+2. **Never edit `.bob/template.html`** — it is the reusable master template
+3. **Output only to `onbob-output/`** — single output file only
+4. **Max 200 files read** per scan — prioritise manifests, entrypoints, and router/model/storage files
+5. **No shell scripts** — use only Bob native file tools

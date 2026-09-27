@@ -1,101 +1,99 @@
 # onBob — Architectural Atlas
 ### IBM Bob 2.0 Hackathon Submission
 
-> **"While everyone else reads code to understand the app, interns using onBob click the app to understand the code."**
+> **"While everyone else reads code to understand the app, engineers using onBob click the app to understand the code."**
 
 [![IBM Bob 2.0](https://img.shields.io/badge/IBM%20Bob-2.0-7c3aed)](https://www.ibm.com)
-[![Target Repo](https://img.shields.io/badge/target-tiangolo%2Ffull--stack--fastapi--template-blue)](https://github.com/tiangolo/full-stack-fastapi-template)
+[![Skill](https://img.shields.io/badge/type-Bob%20Skill-blue)](.bob/skills/onBob/SKILL.md)
 [![Read-Only](https://img.shields.io/badge/mode-read--only-green)](.)
-[![License: MIT](https://img.shields.io/badge/license-MIT-orange)](.)
+[![License: MIT](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
 
 ---
 
 ## What is onBob?
 
-**onBob** is an IBM Bob 2.0 agent workflow that automatically generates an **Architectural Atlas** for any codebase — a self-contained interactive HTML file that maps a running application's UI to its backend architectural pillars, bidirectionally.
+**onBob** is a native IBM Bob 2.0 skill that autonomously scans any repository and generates a
+self-contained, interactive **Architectural Atlas** — a single HTML file that maps every
+architectural pillar, traces feature flows end-to-end, simulates blast radius, and delivers
+structured execution traces with exact `file:line` references.
 
-**The Problem it Solves:**
-New developers spend 2–4 weeks just comprehending unfamiliar codebases. Existing documentation is manually maintained and always out of date. onBob inverts this: instead of reading code to understand the app, you click the app to understand the code.
+No scripts. No external dependencies. No HTTP server required. Just `/onBob`.
+
+---
+
+## The Problem
+
+Large codebases are opaque. New engineers spend 2–3 weeks just reading code to understand how the
+system fits together. Architecture diagrams live in stale Confluence pages. Nobody knows what
+breaks when module X changes.
+
+**onBob inverts this**: instead of reading code to understand the app, you open a single HTML file
+and the architecture is already mapped, animated, and annotated.
 
 ---
 
 ## Quick Start
 
-```bash
-# 1. Clone the target repo
-git clone https://github.com/tiangolo/full-stack-fastapi-template target-repo
-cd target-repo && docker compose up -d
-
-# 2. Open the atlas (no server needed)
-open onbob-output/architecture-atlas.html
-# OR serve it:
-python -m http.server 3000 --directory onbob-output
+```
+# In IBM Bob, with any repository open in your workspace:
+/onBob
 ```
 
-Open `http://localhost:3000/architecture-atlas.html` in your browser.
+Bob will scan the repo, build the data payload, and write:
+
+```
+onbob-output/architecture-atlas.html   ← open this in any browser
+```
+
+No server needed. No install. Double-click and go.
 
 ---
 
-## How It Works — The 3 Layers
+## How It Works
 
-### Layer 1: Repository Scan
-Bob reads the target codebase (MAX 25 files, read-only), clusters files into **5 architectural pillars**, and generates:
-- `onbob-output/pillars.json` — pillar definitions
-- `onbob-output/health.json` — test coverage, commit age, TODOs
-- `onbob-output/quest.json` — structured onboarding checklist
-- `onbob-output/AGENTS.md` — repo index for Layer 3
+### Step 1 — Autonomous Scan
+Bob uses its native file tools (`glob`, `grep`, `read_file`, `GetSymbolsOverview`, `FindSymbol`)
+to inspect the repository. No shell scripts are executed. Bob clusters the codebase into
+**4–6 Architectural Pillars**, maps directed dependencies between them, and identifies key
+execution paths for the most important features.
 
-```
-# Bob Prompt (paste into Bob chat):
-Execute the onBob Layer 1 scan using the skill defined in .bob/commands/scan.md
-Target repository: target-repo/
-Output directory: onbob-output/
+### Step 2 — Build `window.__ONBOB_DATA__`
+Bob constructs the full structured data payload inline:
+
+```js
+window.__ONBOB_DATA__ = {
+  "org/repo-name": {
+    repo_name, primary_lang, file_count,
+    layers,          // Blueprint panel — left pane
+    pillars,         // Force-graph nodes — right pane
+    features_menu,   // Feature flow playback
+    traces,          // Step-by-step execution trace drawers
+    blast,           // Blast radius per pillar
+    notes            // Annotated arch / risk / todo observations
+  }
+};
 ```
 
-### Layer 2: Dependency Mesh
-Bob analyzes cross-pillar import/call relationships and maps them as animated connection edges:
-- `onbob-output/edges.json` — directed connection graph
-- Presents the **"Which feature?" CTA** for Layer 3
-
-```
-# Bob Prompt:
-Execute the onBob Layer 2 mesh analysis using .bob/commands/mesh.md
-```
-
-### Layer 3: Live Execution Trace
-Bob runs real `curl` commands against the live app and traces execution through source files with exact `file:line` mapping:
-- `onbob-output/execution-cards.json` — feature execution traces
-
-```
-# Bob Prompt:
-Execute the onBob Layer 3 feature trace using the skill defined in .bob/commands/trace.md
-```
+### Step 3 — Generate the Atlas
+Bob reads `.bob/template.html`, injects the data payload immediately before the
+`<!-- ─── Repo Data Injection Point -->` comment, and writes the result to
+`onbob-output/architecture-atlas.html`. The master template is **never modified**.
 
 ---
 
-## The Architectural Atlas
+## The Atlas UI
 
-Open `onbob-output/architecture-atlas.html` — a **100% self-contained HTML file** that works in any browser with zero setup.
-
-### Features:
-- **🏛️ Blueprint View** — Interactive layered architecture diagram
-- **🕸️ L2 Dependency Mesh** — Animated edge graph with REST/DB connection types
-- **⚡ Layer 3 Execution Traces** — Real curl output + file:line step-by-step traces
-- **🏥 Health Badges** — Test coverage, commit age, TODO count per pillar
-- **🎯 Onboarding Quest** — Structured Day 1 / Week 1 / Month 1 learning path
-- **💥 Blast Radius Simulator** — Simulate what breaks if any pillar is modified
-- **↔️ Bidirectional Navigation** — Click UI → find code, click pillar → find UI
-
-### Target Repository
-The default atlas targets **`tiangolo/full-stack-fastapi-template`** (~30k ⭐):
-
-| Pillar | Files | Team |
-|--------|-------|------|
-| 🔐 Identity | login.py, security.py, users.py | #team-backend |
-| ⚙️ Core Engine | items.py, crud.py | #team-backend |
-| 🗄️ Data Layer | models.py, db.py, alembic/ | #team-platform |
-| 🌐 API Gateway | main.py, deps.py, api/main.py | #team-backend |
-| 🖥️ Frontend Shell | main.tsx, router.tsx, client/ | #team-frontend |
+| Panel | What it shows |
+|-------|--------------|
+| 🏛️ **Blueprint** | Layered architecture diagram — left pane |
+| 🕸️ **Dependency Mesh** | D3 force-graph of pillars and edges — right pane |
+| ▶️ **Feature Flow Playback** | Animated pulse traveling through the call graph |
+| 🔍 **Execution Trace Drawer** | Step-by-step file:line trace per feature |
+| 💥 **Blast Simulator** | Click any pillar → see risk score and downstream impact |
+| 📋 **Node Inspector** | Per-pillar mission, symbols, code snippet, reading list |
+| 🎨 **Themes** | Light / Dark — press `T` to toggle |
+| ⊞ **Fit Graph** | Press `F` to re-center |
+| ⎋ **Close panels** | Press `Escape` to close any open drawer or modal |
 
 ---
 
@@ -103,63 +101,52 @@ The default atlas targets **`tiangolo/full-stack-fastapi-template`** (~30k ⭐):
 
 ```
 onbob/
-├── README.md                          ← This file
-├── AGENTS.md                          ← Bob-generated repo execution index
+├── README.md                           ← This file
+├── AGENTS.md                           ← Bob-generated repo execution index
 │
 ├── .bob/
+│   ├── template.html                   ← Master UI template (never edit directly)
 │   ├── commands/
-│   │   ├── scan.md                    ← Layer 1: repo scanner skill
-│   │   ├── mesh.md                    ← Layer 2: dependency mesh skill
-│   │   └── trace.md                   ← Layer 3: execution tracer skill
-│   └── evidence/                      ← Screenshot evidence (hackathon requirement)
+│   │   └── onBob.md                    ← /onBob command definition
+│   ├── skills/
+│   │   └── onBob/
+│   │       └── SKILL.md                ← Full skill definition + data contract
+│   └── evidence/
+│       ├── README.md                   ← Evidence capture instructions
+│       └── *.png                       ← Bob session screenshots (hackathon requirement)
 │
-├── onbob-output/                      ← ALL generated artifacts
-│   ├── architecture-atlas.html        ← THE MAIN DELIVERABLE ⭐
-│   ├── pillars.json                   ← Layer 1: architectural pillars
-│   ├── edges.json                     ← Layer 2: dependency mesh
-│   ├── execution-cards.json           ← Layer 3: feature traces
-│   ├── health.json                    ← Health metrics per pillar
-│   ├── quest.json                     ← Onboarding quest checklist
-│   ├── atlas_data.json                ← Aggregated scan metadata (repo stats, pillar/edge counts)
-│   ├── preflight-result.json          ← Pre-flight check output (generated by scripts/preflight.py)
-│   └── screenshots/                   ← App screenshots (Playwright or fallback)
+├── onbob-output/
+│   ├── README.md                       ← How to regenerate
+│   └── architecture-atlas.html         ← ⭐ THE MAIN DELIVERABLE — open in any browser
 │
-├── scripts/
-│   ├── preflight.py                   ← Pre-flight environment checker
-│   ├── capture-screenshots.py         ← Playwright screenshot capture
-│   ├── health-check.py                ← Health metrics collector
-│   ├── mesh-builder.py                ← Layer 2 import analyzer
-│   └── onBob_scanner.py               ← Main repo scanner (generic)
-│
-└── target-repo/                       ← Clone of tiangolo/full-stack-fastapi-template
+└── evidence-of-bob-usage/
+    └── *.png                           ← Additional Bob session evidence
 ```
 
 ---
 
-## Bob Prompts (Copy-Paste Ready)
+## Demo — DuckDB
 
-### Demo Run Prompt
-```
-Run the complete onBob workflow on the target repository:
+The committed atlas in `onbob-output/architecture-atlas.html` was generated by running
+`/onBob` against the [DuckDB](https://github.com/duckdb/duckdb) C++ monorepo
+(3,228 source files). It maps:
 
-Step 1: Read the repository structure
-Step 2: Confirm pillars.json and execution-cards.json exist in onbob-output/
-Step 3: Open onbob-output/architecture-atlas.html in the default browser using Bob Shell:
-  python -m http.server 3000 --directory onbob-output
-Step 4: Print a summary of what was generated:
-  - Number of architectural pillars mapped
-  - Number of execution traces captured
-  - Estimated time for a developer to understand this architecture manually vs. with onBob
-```
+| Pillar | Responsibility | Key File |
+|--------|---------------|----------|
+| 🔵 **Query Frontend** | SQL parsing & planning | `src/parser/parser.cpp` |
+| 🟢 **Optimizer** | Logical → physical plan | `src/optimizer/optimizer.cpp` |
+| 🟡 **Execution Engine** | Physical operator execution | `src/execution/physical_plan_generator.cpp` |
+| 🟣 **Storage Engine** | Buffer pool, data tables | `src/storage/data_table.cpp` |
+| 🔴 **Transaction Manager** | MVCC, WAL, commit | `src/transaction/duck_transaction_manager.cpp` |
+| ⚪ **Catalog** | Schema, type registry | `src/catalog/catalog.cpp` |
+| 🟠 **Client Context** | Session & query lifecycle | `src/main/client_context.cpp` |
+| 🩷 **WAL** | Write-ahead log flush | `src/storage/write_ahead_log.cpp` |
 
----
-
-## Hackathon Evidence
-
-Screenshots of Bob sessions are required and stored in `.bob/evidence/`:
-- `layer1-bob-session.png` — Layer 1 scan completion
-- `layer3-bob-session.png` — Layer 3 trace completion
-- `demo-bob-session.png` — Full demo run
+Feature flows traced:
+1. **SQL Query Execution** — ClientContext → Parser → Planner → Optimizer → Executor
+2. **Storage Write** — DataTable → WAL flush → Commit
+3. **Transaction Lifecycle** — Begin → Execute → Commit/Rollback
+4. **Catalog Lookup** — Query → Catalog → Type resolution
 
 ---
 
@@ -167,22 +154,39 @@ Screenshots of Bob sessions are required and stored in `.bob/evidence/`:
 
 | Metric | Without onBob | With onBob |
 |--------|--------------|------------|
-| Time to first PR | 14 days | 3 days |
-| Architecture comprehension | 2 weeks reading | 4 minutes |
-| Documentation freshness | Manually maintained | Auto-regenerated |
-| Tool setup required | Confluence + Notion + Slack | Zero |
-| Bob Coins consumed | — | ~15 coins |
+| Architecture comprehension | 2–3 weeks reading | ~4 minutes |
+| Documentation freshness | Manually maintained | Re-run `/onBob` on any commit |
+| Tool setup required | Confluence + diagrams + Slack | Zero |
+| Works on any repo | ❌ | ✅ |
+| Output format | Various | Single portable HTML file |
+
+> Every organisation already running IBM Bob gets this capability — no new infrastructure,
+> no new licences, zero adoption friction.
+
+---
+
+## Regenerating the Atlas
+
+To generate a fresh atlas against any repo:
+
+1. Open IBM Bob with the target repository in your workspace
+2. Type `/onBob`
+3. Open `onbob-output/architecture-atlas.html` in your browser
+
+To target a specific sub-directory or cloned repo, type:
+```
+/onBob — target: path/to/repo
+```
 
 ---
 
 ## Tech Stack
 
-- **IBM Bob 2.0** — Agent runtime (scan, trace, shell execution)
-- **Python 3.8+** — Scanner scripts
-- **Playwright** — Optional screenshot capture
-- **Vanilla HTML/CSS/JS** — Zero-dependency atlas viewer
-- **Target**: FastAPI (Python) + React (TypeScript) + PostgreSQL
+- **IBM Bob 2.0** — Agent runtime (autonomous file scan, data construction, HTML generation)
+- **D3.js v7** — Force-directed graph (bundled inline in template)
+- **Vanilla HTML / CSS / JS** — Zero-dependency atlas viewer, self-contained
+- **No build step** — template is raw HTML, output is a single file
 
 ---
 
-*Built for the IBM Bob 2.0 Hackathon · Powered by IBM Bob*
+*Built for the IBM Bob 2.0 Hackathon · Powered entirely by IBM Bob*

@@ -1660,6 +1660,91 @@
             border-radius: var(--radius-sm);
             padding: 14px;
         }
+
+        /* ── Canvas Note Cards ─────────────────────────────────────── */
+        .canvas-note-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .canvas-note-card.arch    { border-left: 3px solid var(--blue-accent); }
+        .canvas-note-card.risk    { border-left: 3px solid var(--coral-accent); }
+        .canvas-note-card.todo    { border-left: 3px solid var(--amber-accent); }
+        .canvas-note-card.perf    { border-left: 3px solid var(--lime-accent); }
+
+        .note-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .note-type-badge {
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        .note-type-badge.arch { background: color-mix(in srgb, var(--blue-accent) 18%, transparent); color: var(--blue-accent); }
+        .note-type-badge.risk { background: color-mix(in srgb, var(--coral-accent) 18%, transparent); color: var(--coral-accent); }
+        .note-type-badge.todo { background: color-mix(in srgb, var(--amber-accent) 18%, transparent); color: var(--amber-accent); }
+        .note-type-badge.perf { background: color-mix(in srgb, var(--lime-accent) 18%, transparent); color: var(--lime-accent); }
+
+        .note-card-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* ── Blast Risk Bar ────────────────────────────────────────── */
+        .blast-risk-bar-wrap {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 6px 0;
+        }
+        .blast-risk-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--lime-accent), var(--amber-accent), var(--coral-accent));
+            transition: width 0.4s ease;
+        }
+
+        /* ── Empty State ───────────────────────────────────────────── */
+        .empty-state-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 32px 16px;
+            color: var(--text-tertiary);
+            font-size: 0.82rem;
+            text-align: center;
+        }
+        .empty-state-box .empty-icon {
+            font-size: 2rem;
+            opacity: 0.45;
+        }
+
+        /* ── Keyboard Hint Pills ───────────────────────────────────── */
+        .kbd {
+            display: inline-block;
+            padding: 1px 5px;
+            font-size: 0.65rem;
+            font-family: monospace;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
     </style>
 </head>
 
@@ -2223,8 +2308,9 @@
                 .velocityDecay(0.65)
                 .alphaDecay(0.02);
 
-            // Clear Edges Layer
+            // Clear Edges and Nodes Layers
             edgesLayer.selectAll('*').remove();
+            nodesLayer.selectAll('*').remove();
 
             // 1. Visible path lines
             const edgeSelection = edgesLayer.selectAll('path.graph-edge-path')
@@ -3379,17 +3465,101 @@
         }
 
         // ═════════════════════════════════════════════════════════════
+        // FEATURE FLOW HELPERS
+        // ═════════════════════════════════════════════════════════════
+        function selectAllFeatureFlows() {
+            stopPlayback();
+            activeFeatureIds.clear();
+            (currentData.features_menu || []).forEach(f => activeFeatureIds.add(f.id));
+            if (currentData.features_menu && currentData.features_menu.length > 0) {
+                activePlaybackTrace = currentData.features_menu[0];
+            }
+            playbackStepIndex = 0;
+            highlightActiveFeatureFlows();
+            updateStepBadge();
+            showToast('Simulating all feature flows');
+        }
+
+        function clearAllFeatureFlows() {
+            stopPlayback();
+            activeFeatureIds.clear();
+            if (currentData.features_menu && currentData.features_menu.length > 0) {
+                activeFeatureIds.add(currentData.features_menu[0].id);
+                activePlaybackTrace = currentData.features_menu[0];
+            }
+            playbackStepIndex = 0;
+            highlightActiveFeatureFlows();
+            updateStepBadge();
+            showToast('Reset to single feature flow');
+        }
+
+        // ─── Fit Graph ────────────────────────────────────────────────
+        function fitGraph() {
+            if (!svg || !zoomBehavior) return;
+            const container = document.getElementById('meshCanvas');
+            if (!container) return;
+            const w = container.clientWidth || 800;
+            const h = container.clientHeight || 600;
+            svg.transition().duration(480)
+                .call(zoomBehavior.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(0.72));
+            showToast('Graph fitted ⊞');
+        }
+
+        // ═════════════════════════════════════════════════════════════
         // BOOT — loads first repo from window.__ONBOB_DATA__ dynamically
         // ═════════════════════════════════════════════════════════════
         document.addEventListener('DOMContentLoaded', () => {
             const firstKey = Object.keys(REPO_PROFILES)[0];
+            const profile   = REPO_PROFILES[firstKey];
+
+            // Populate header meta spans
             const repoNameEl = document.getElementById('repoNameDisplay');
-            if (repoNameEl) repoNameEl.textContent = REPO_PROFILES[firstKey].repo_name || firstKey;
+            if (repoNameEl) repoNameEl.textContent = profile.repo_name || firstKey;
+
+            const langEl = document.getElementById('repoLangDisplay');
+            if (langEl && profile.lang) langEl.textContent = profile.lang;
+
+            const fileEl = document.getElementById('repoFileCountDisplay');
+            if (fileEl && profile.file_count) fileEl.textContent = `${profile.file_count.toLocaleString()} files`;
+
             switchRepoProfile(firstKey);
             switchRightView('mesh');
             initLayoutResizer();
+
             window.addEventListener('resize', () => {
                 if (currentRightView === 'mesh') initForceGraph();
+            });
+
+            // ── Global keyboard shortcuts ─────────────────────────────
+            document.addEventListener('keydown', (e) => {
+                // Skip when typing in an input / textarea
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                switch (e.key.toUpperCase()) {
+                    case 'T':
+                        toggleTheme();
+                        break;
+                    case 'F':
+                        fitGraph();
+                        break;
+                    case 'ESCAPE':
+                        // Close trace drawer
+                        const drawer = document.getElementById('traceDrawer');
+                        if (drawer && drawer.classList.contains('open')) {
+                            drawer.classList.remove('open');
+                        }
+                        // Close feature explainer
+                        const explainer = document.getElementById('featureExplainer');
+                        if (explainer && explainer.classList.contains('open')) {
+                            explainer.classList.remove('open');
+                        }
+                        // Close blast modal
+                        const blastModal = document.getElementById('blastModal');
+                        if (blastModal && blastModal.style.display !== 'none' && blastModal.style.display !== '') {
+                            blastModal.style.display = 'none';
+                        }
+                        break;
+                }
             });
         });
     </script>
