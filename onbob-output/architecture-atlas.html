@@ -1,0 +1,4356 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>/onBob — Architecture Atlas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <!-- D3.js v7 for 60fps Force Physics, Collision & Camera Zoom/Pan -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <style>
+        /* ─── Modern Bento Design Tokens (Harmonious Reference Palette) ─── */
+        :root {
+            --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            /* Light Mode Default */
+            --bg: #F4F5F8;
+            --surface: #FFFFFF;
+            --surface-subtle: #F9FAFB;
+            --surface-card: #FFFFFF;
+            --border: rgba(0, 0, 0, 0.08);
+            --border-hover: rgba(0, 0, 0, 0.16);
+            --text-primary: #121417;
+            --text-secondary: #64748B;
+            --text-tertiary: #94A3B8;
+
+            /* High-Contrast Crisp Edge Tokens */
+            --edge-color: #64748B;
+            --edge-opacity: 0.8;
+            --arrow-color: #475569;
+
+            /* Reference Color Tokens */
+            --lime-accent: #D7F946;
+            --lime-accent-hover: #C5E938;
+            --lime-text: #121417;
+            --lilac-accent: #D7CDFF;
+            --lilac-text: #372A70;
+            --coral-accent: #FFA5A2;
+            --coral-text: #7A2421;
+            --mint-accent: #A5F3D1;
+            --mint-text: #0E5C3E;
+            --sky-accent: #BAE6FD;
+            --sky-text: #0C4A6E;
+
+            --radius-lg: 24px;
+            --radius-md: 18px;
+            --radius-sm: 12px;
+            --radius-pill: 9999px;
+
+            --shadow-subtle: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
+            --shadow-card: 0 10px 30px -4px rgba(0, 0, 0, 0.06);
+            --shadow-glow: 0 8px 24px rgba(215, 249, 70, 0.45);
+            --shadow-glow-loop: 0 0 0 2px var(--lime-accent), 0 0 20px rgba(215, 249, 70, 0.5);
+
+            --transition-fast: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+            --transition-smooth: 320ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Sleek Dark Mode */
+        [data-theme="dark"] {
+            --bg: #0F1015;
+            --surface: #171821;
+            --surface-subtle: #1F212D;
+            --surface-card: #171821;
+            --border: rgba(255, 255, 255, 0.09);
+            --border-hover: rgba(255, 255, 255, 0.18);
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-tertiary: #64748B;
+
+            /* High-Contrast Dark Edge Tokens */
+            --edge-color: #94A3B8;
+            --edge-opacity: 0.85;
+            --arrow-color: #CBD5E1;
+
+            --lime-accent: #D7F946;
+            --lime-text: #121417;
+            --lilac-accent: #372A70;
+            --lilac-text: #E3DCFF;
+            --coral-accent: #5C1D1B;
+            --coral-text: #FFBEBA;
+            --mint-accent: #114B33;
+            --mint-text: #A7F3D0;
+            --sky-accent: #0C4A6E;
+            --sky-text: #BAE6FD;
+
+            --shadow-subtle: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+            --shadow-card: 0 10px 30px -4px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 8px 24px rgba(215, 249, 70, 0.3);
+            --shadow-glow-loop: 0 0 0 2px var(--lime-accent), 0 0 20px rgba(215, 249, 70, 0.45);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* ─── Minimal Header ─────────────────────────────────────────── */
+        .app-header {
+            height: 68px;
+            padding: 0 28px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: var(--lime-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--lime-text);
+            font-size: 1.25rem;
+            font-weight: 800;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .brand-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .brand-title span {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Target Repo Dropdown */
+        .repo-pill-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-pill);
+            padding: 6px 14px;
+        }
+
+        .repo-pill-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-tertiary);
+        }
+
+        .repo-pill-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pill-btn {
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--surface-subtle);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .pill-btn:hover {
+            background: var(--surface);
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .pill-btn-danger {
+            background: rgba(255, 165, 162, 0.15);
+            border-color: rgba(255, 165, 162, 0.4);
+            color: #E11D48;
+        }
+
+        .pill-btn-danger:hover {
+            background: rgba(255, 165, 162, 0.25);
+            border-color: #E11D48;
+        }
+
+        .theme-toggle-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--surface-subtle);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle-btn:hover {
+            background: var(--surface);
+            border-color: var(--border-hover);
+        }
+
+        /* ─── Main Resizable Layout ──────────────────────────────────── */
+        .app-layout {
+            flex: 1;
+            display: flex;
+            padding: 20px 24px;
+            gap: 0;
+            overflow: hidden;
+            background: var(--bg);
+            position: relative;
+        }
+
+        .bento-column.left-column {
+            width: 50%;
+            min-width: 280px;
+            max-width: calc(100% - 320px);
+            flex-shrink: 0;
+        }
+
+        .bento-column.right-column {
+            flex: 1;
+            min-width: 320px;
+        }
+
+        /* Draggable Splitter Handle */
+        .layout-resizer-handle {
+            width: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: col-resize;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 30;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0 -2px;
+        }
+
+        .resizer-bar {
+            width: 4px;
+            height: 48px;
+            border-radius: var(--radius-pill);
+            background: var(--border);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .layout-resizer-handle:hover .resizer-bar,
+        .layout-resizer-handle.dragging .resizer-bar {
+            width: 6px;
+            height: 72px;
+            background: var(--lime-accent);
+            box-shadow: 0 0 14px rgba(215, 249, 70, 0.7);
+        }
+
+        body.resizing-active {
+            cursor: col-resize !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+        }
+
+        body.resizing-active iframe,
+        body.resizing-active svg {
+            pointer-events: none !important;
+        }
+
+        /* ─── Bento Column Wrapper ───────────────────────────────────── */
+        .bento-column {
+            display: flex;
+            flex-direction: column;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .column-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface);
+            flex-shrink: 0;
+            z-index: 20;
+        }
+
+        .column-title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .column-title {
+            font-size: 0.96rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .column-badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill);
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        /* ─── Left Column: Blueprint Layers ──────────────────────────── */
+        .blueprint-scroll-stage {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .blueprint-scroll-stage::-webkit-scrollbar,
+        .pillars-scroll-stage::-webkit-scrollbar,
+        .inspector-body::-webkit-scrollbar,
+        .drawer-body::-webkit-scrollbar,
+        .blast-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .blueprint-scroll-stage::-webkit-scrollbar-thumb,
+        .pillars-scroll-stage::-webkit-scrollbar-thumb,
+        .inspector-body::-webkit-scrollbar-thumb,
+        .drawer-body::-webkit-scrollbar-thumb,
+        .blast-body::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.14);
+            border-radius: 3px;
+        }
+
+        [data-theme="dark"] .blueprint-scroll-stage::-webkit-scrollbar-thumb,
+        [data-theme="dark"] .pillars-scroll-stage::-webkit-scrollbar-thumb,
+        [data-theme="dark"] .inspector-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Layer Bento Card */
+        .bento-layer-card {
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            transition: all var(--transition-fast);
+        }
+
+        .bento-layer-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .layer-top-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .layer-pill-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .layer-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+
+        .layer-items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        /* Clean Component Card */
+        .component-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .component-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .component-card.selected {
+            border-color: var(--lime-accent);
+            box-shadow: 0 0 0 2px var(--lime-accent);
+        }
+
+        .component-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .component-icon-wrap {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .component-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.25;
+            flex: 1;
+        }
+
+        .component-desc {
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+            margin-bottom: 12px;
+            flex: 1;
+        }
+
+        .component-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            margin-top: auto;
+        }
+
+        .component-file-chip {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            background: var(--surface-subtle);
+            padding: 3px 8px;
+            border-radius: var(--radius-pill);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            max-width: 170px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .component-arrow {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            transition: transform 0.2s;
+        }
+
+        .component-card:hover .component-arrow {
+            transform: translateX(3px);
+            color: var(--text-primary);
+        }
+
+        /* Flow Connector */
+        .flow-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 2px 0;
+        }
+
+        .flow-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .flow-chip {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 2px 10px;
+            border-radius: var(--radius-pill);
+        }
+
+        /* ─── Right Column: Graph & Dynamics ─────────────────────────── */
+        .tab-pill-group {
+            display: flex;
+            background: var(--surface-subtle);
+            padding: 4px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            gap: 4px;
+        }
+
+        .tab-pill-btn {
+            border: none;
+            background: transparent;
+            font-family: var(--font-sans);
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 6px 16px;
+            border-radius: var(--radius-pill);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab-pill-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-pill-btn.active {
+            background: var(--lime-accent);
+            color: var(--lime-text);
+            font-weight: 700;
+            box-shadow: var(--shadow-glow);
+        }
+
+        /* ─── Force Graph Stage ──────────────────────────────────────── */
+        .mesh-view-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 50%, rgba(215, 249, 70, 0.05) 0%, transparent 65%),
+                radial-gradient(circle at 10% 20%, rgba(215, 205, 255, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(186, 230, 253, 0.08) 0%, transparent 40%);
+        }
+
+        .mesh-canvas-stage {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        .mesh-canvas-stage:active {
+            cursor: grabbing;
+        }
+
+        .graph-svg-main {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* ─── Graph Node Pill Cards (DOM in foreignObject) ────────────── */
+        .graph-node-pill {
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-pill);
+            box-shadow: var(--shadow-card);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-smooth), filter var(--transition-smooth);
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+
+        .graph-node-pill:hover {
+            transform: scale(1.04);
+            border-color: var(--border-hover);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Type Colors */
+        .graph-node-pill[data-type="api"] {
+            border-color: rgba(56, 189, 248, 0.6);
+        }
+        .graph-node-pill[data-type="api"] .node-type-dot {
+            background: #38BDF8;
+            box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+        }
+
+        .graph-node-pill[data-type="logic"] {
+            border-color: rgba(167, 139, 250, 0.6);
+        }
+        .graph-node-pill[data-type="logic"] .node-type-dot {
+            background: #A78BFA;
+            box-shadow: 0 0 6px rgba(167, 139, 250, 0.6);
+        }
+
+        .graph-node-pill[data-type="db"] {
+            border-color: rgba(52, 211, 153, 0.6);
+        }
+        .graph-node-pill[data-type="db"] .node-type-dot {
+            background: #34D399;
+            box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+        }
+
+        .graph-node-pill[data-type="ui"] {
+            border-color: rgba(251, 113, 133, 0.6);
+        }
+        .graph-node-pill[data-type="ui"] .node-type-dot {
+            background: #FB7185;
+            box-shadow: 0 0 6px rgba(251, 113, 133, 0.6);
+        }
+
+        .node-type-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .node-icon-symbol {
+            font-size: 1.15rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .node-text-wrap {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .node-name-text {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.25;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .node-sub-text {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            letter-spacing: 0.02em;
+        }
+
+        /* Active / Selected Glowing Loop State */
+        .graph-node-pill.selected {
+            border-color: var(--lime-accent) !important;
+            animation: node-pulse-glow 1.8s infinite ease-in-out;
+            z-index: 50;
+        }
+
+        @keyframes node-pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 0 2px var(--lime-accent), 0 0 16px rgba(215, 249, 70, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 0 3.5px var(--lime-accent), 0 0 28px rgba(215, 249, 70, 0.75);
+            }
+        }
+
+        /* Inactive During Playback State */
+        .graph-node-pill.dimmed {
+            opacity: 0.38;
+            filter: saturate(40%);
+        }
+
+        /* ─── Edge Lines & Traveling Pulse ───────────────────────────── */
+        .graph-edge-path {
+            stroke: var(--edge-color);
+            stroke-width: 2px;
+            stroke-opacity: var(--edge-opacity);
+            fill: none;
+            transition: stroke var(--transition-fast), stroke-width var(--transition-fast), stroke-opacity var(--transition-fast);
+        }
+
+        .graph-edge-path.async-edge {
+            stroke-dasharray: 6 4;
+        }
+
+        .graph-edge-path.active-flow {
+            stroke: var(--lime-accent) !important;
+            stroke-width: 3.5px !important;
+            stroke-opacity: 1 !important;
+            filter: drop-shadow(0 0 8px rgba(215, 249, 70, 0.8));
+        }
+
+        .graph-edge-path.dimmed-edge {
+            stroke-opacity: 0.18 !important;
+        }
+
+        /* ─── Floating Playback Toolbar ──────────────────────────────── */
+        .graph-playback-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-pill);
+            box-shadow: 0 14px 34px -4px rgba(0, 0, 0, 0.12);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 16px;
+            z-index: 40;
+            transition: all var(--transition-fast);
+        }
+
+        [data-theme="dark"] .graph-playback-bar {
+            background: rgba(23, 24, 33, 0.92);
+            box-shadow: 0 14px 34px -4px rgba(0, 0, 0, 0.5);
+        }
+
+        .playback-ctrl-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .playback-ctrl-btn:hover {
+            border-color: var(--border-hover);
+            transform: scale(1.08);
+        }
+
+        .playback-ctrl-btn.active-play {
+            background: var(--lime-accent);
+            color: var(--lime-text);
+            border-color: transparent;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .playback-feature-select {
+            background: transparent;
+            border: none;
+            font-family: var(--font-sans);
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            outline: none;
+            cursor: pointer;
+            max-width: 190px;
+            text-overflow: ellipsis;
+        }
+
+        .playback-feature-select option {
+            background: var(--surface);
+            color: var(--text-primary);
+        }
+
+        .playback-step-badge {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            font-weight: 700;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            padding: 3px 8px;
+            border-radius: var(--radius-pill);
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .speed-pill-group {
+            display: flex;
+            gap: 3px;
+            background: var(--surface-subtle);
+            padding: 2px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+        }
+
+        .speed-pill-btn {
+            border: none;
+            background: transparent;
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: var(--radius-pill);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .speed-pill-btn.active {
+            background: var(--lime-accent);
+            color: var(--lime-text);
+            font-weight: 700;
+        }
+
+        /* ─── Slide-In Node Detail Side Panel ───────────────────────── */
+        .node-inspector-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 320px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            box-shadow: -10px 0 35px rgba(0, 0, 0, 0.08);
+            transform: translateX(100%);
+            transition: transform var(--transition-smooth);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .node-inspector-panel.open {
+            transform: translateX(0);
+        }
+
+        .inspector-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface-subtle);
+        }
+
+        .inspector-close-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+
+        .inspector-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .inspector-section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-tertiary);
+            margin-bottom: 6px;
+        }
+
+        .inspector-code-box {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            color: #0284C7;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+
+        [data-theme="dark"] .inspector-code-box {
+            color: #38BDF8;
+        }
+
+        .inspector-divider {
+            height: 1px;
+            background: var(--border);
+            opacity: 0.6;
+        }
+
+        .inspector-chip-wrap {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .inspector-link-chip {
+            font-family: var(--font-sans);
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .inspector-link-chip:hover {
+            border-color: var(--lime-accent);
+            background: var(--lime-accent);
+            color: var(--lime-text);
+            transform: translateY(-1px);
+        }
+
+        /* ─── Pillars List View ──────────────────────────────────────── */
+        .pillars-scroll-stage {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .pillars-scroll-stage.active {
+            display: flex;
+        }
+
+        .pillar-bento-card {
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .pillar-bento-card:hover {
+            background: var(--surface);
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .pillar-bento-card.selected {
+            border-color: var(--lime-accent);
+            box-shadow: 0 0 0 2px var(--lime-accent);
+            background: var(--surface);
+        }
+
+        .pillar-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .pillar-heading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .pillar-desc-text {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+            margin-bottom: 12px;
+        }
+
+        .pillar-tag-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .badge-pill {
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill);
+        }
+
+        .badge-pill.lime {
+            background: var(--lime-accent);
+            color: var(--lime-text);
+        }
+
+        .badge-pill.lilac {
+            background: var(--lilac-accent);
+            color: var(--lilac-text);
+        }
+
+        .badge-pill.coral {
+            background: var(--coral-accent);
+            color: var(--coral-text);
+        }
+
+        .badge-pill.subtle {
+            background: var(--surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        /* ─── Drawer: Feature Execution Flow ─────────────────────────── */
+        .exec-drawer {
+            position: fixed;
+            top: 0;
+            right: -560px;
+            bottom: 0;
+            width: 520px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
+            z-index: 200;
+            transition: right var(--transition-smooth);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .exec-drawer.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .drawer-close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--surface-subtle);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .drawer-close-btn:hover {
+            background: var(--surface);
+        }
+
+        .drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .trace-step-card {
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            position: relative;
+        }
+
+        .trace-step-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            background: var(--lime-accent);
+            color: var(--lime-text);
+            padding: 2px 8px;
+            border-radius: var(--radius-pill);
+            display: inline-block;
+            margin-bottom: 6px;
+        }
+
+        .trace-step-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .trace-step-file {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: #0284C7;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .trace-step-desc {
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+
+        /* ─── Modal: Blast Radius Simulator ─────────────────────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(8px);
+            z-index: 300;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-window {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.96);
+            width: 90%;
+            max-width: 800px;
+            max-height: 88vh;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+            border-radius: var(--radius-lg);
+            z-index: 310;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transition: all var(--transition-fast);
+        }
+
+        .modal-window.open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .blast-pill-options {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .blast-target-btn {
+            font-family: var(--font-sans);
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .blast-target-btn.active {
+            background: var(--coral-accent);
+            color: var(--coral-text);
+            border-color: transparent;
+            font-weight: 700;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: var(--surface-subtle);
+        }
+
+        /* Toast Alert */
+        .toast-bubble {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%) translateY(40px);
+            background: var(--text-primary);
+            color: var(--surface);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 10px 22px;
+            border-radius: var(--radius-pill);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: all var(--transition-fast);
+        }
+
+        .toast-bubble.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ─── Arrow Semantics & Edge Labels ────────────────────────── */
+        .edge-hit-area {
+            fill: none;
+            stroke: transparent;
+            stroke-width: 22px;
+            cursor: pointer;
+        }
+
+        .edge-label-g {
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.15s ease-out;
+        }
+
+        .edge-label-g:hover .edge-lbl-bg {
+            stroke: var(--lime-accent);
+            filter: drop-shadow(0 0 8px rgba(215, 249, 70, 0.7));
+            stroke-width: 1.5px;
+        }
+
+        .edge-lbl-bg {
+            fill: var(--surface);
+            stroke: var(--border);
+            stroke-width: 1px;
+            rx: 6px;
+            ry: 6px;
+            transition: all var(--transition-fast);
+        }
+
+        .edge-lbl-bg.active-flow-step {
+            stroke: var(--lime-accent);
+            stroke-width: 1.5px;
+            filter: drop-shadow(0 0 8px rgba(215, 249, 70, 0.8));
+        }
+
+        .edge-lbl-text {
+            font-family: var(--font-mono);
+            font-size: 0.64rem;
+            font-weight: 700;
+            fill: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .edge-lbl-text.active-flow-step {
+            fill: var(--text-primary);
+            font-weight: 800;
+        }
+
+        /* ─── Playback Arrow Legend ────────────────────────────────── */
+        .arrow-legend-inline {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.68rem;
+            color: var(--text-tertiary);
+            font-family: var(--font-sans);
+            padding-left: 6px;
+        }
+
+        .legend-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .legend-line {
+            display: inline-block;
+            width: 16px;
+            height: 2px;
+            border-radius: 1px;
+        }
+
+        .legend-line.sync {
+            background: var(--text-secondary);
+        }
+
+        .legend-line.async {
+            border-top: 2px dashed var(--text-secondary);
+            height: 0;
+            width: 16px;
+        }
+
+        .legend-arrow {
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: var(--lime-accent);
+        }
+
+        .playback-label {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            flex-shrink: 0;
+        }
+
+        .playback-divider {
+            width: 1px;
+            height: 16px;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+
+        /* ─── Code Peek & Symbols in Inspector ─────────────────────── */
+        .inspector-code-block {
+            background: #0D1117;
+            color: #E6EDF3;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 220px;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+            margin: 6px 0 0 0;
+        }
+
+        .inspector-symbol-chip {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .inspector-symbol-chip:hover {
+            border-color: var(--lime-accent);
+            color: var(--lime-accent);
+            transform: translateY(-1px);
+        }
+
+        .inspector-symbol-chip.active {
+            border-color: var(--lime-accent);
+            background: rgba(215, 249, 70, 0.12);
+            color: var(--lime-accent);
+            font-weight: 700;
+        }
+
+        /* ─── Day-1 Onboarding Brief in Inspector ─────────────────── */
+        .onboarding-brief-box {
+            background: rgba(215, 249, 70, 0.06);
+            border: 1px solid rgba(215, 249, 70, 0.28);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-bottom: 12px;
+        }
+
+        .onboarding-brief-label {
+            font-size: 0.66rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--lime-accent);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+
+        .onboarding-brief-text {
+            font-size: 0.76rem;
+            color: var(--text-primary);
+            line-height: 1.45;
+        }
+
+        .onboarding-invariant-tag {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #F87171;
+            border-radius: 4px;
+            margin-top: 8px;
+            line-height: 1.35;
+        }
+
+        .onboarding-file-chip {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 4px 9px;
+            border-radius: 4px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .onboarding-file-chip:hover {
+            border-color: var(--lime-accent);
+            color: var(--lime-accent);
+            transform: translateY(-1px);
+        }
+
+        /* ─── Multi-Flow Convergence Badges ────────────────────────── */
+        .convergence-badge {
+            position: absolute;
+            top: -12px;
+            right: 8px;
+            background: #E11D48;
+            color: #FFFFFF;
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: var(--radius-pill);
+            box-shadow: 0 0 12px rgba(225, 29, 72, 0.7);
+            animation: convergence-pulse 1.6s infinite ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            pointer-events: none;
+            z-index: 20;
+            white-space: nowrap;
+        }
+
+        @keyframes convergence-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        /* ─── Wide Feature-Level Codebase Explainer Drawer ─────────── */
+        .feature-explainer-drawer {
+            position: fixed;
+            top: 0;
+            right: -720px;
+            bottom: 0;
+            width: 680px;
+            max-width: 95vw;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            box-shadow: -15px 0 50px rgba(0, 0, 0, 0.22);
+            z-index: 280;
+            transition: right var(--transition-smooth);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .feature-explainer-drawer.open {
+            right: 0;
+        }
+
+        .explainer-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .explainer-tabs-nav {
+            display: flex;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 4px 18px 0 18px;
+            gap: 6px;
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+
+        .explainer-tab-btn {
+            border: none;
+            background: transparent;
+            font-family: var(--font-sans);
+            font-size: 0.76rem;
+            font-weight: 600;
+            padding: 10px 14px;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .explainer-tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .explainer-tab-btn.active {
+            color: var(--text-primary);
+            border-bottom-color: var(--lime-accent);
+            font-weight: 700;
+        }
+
+        .explainer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .explainer-callout-box {
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+
+        .explainer-layer-step {
+            display: flex;
+            gap: 14px;
+            position: relative;
+        }
+
+        .explainer-layer-step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 17px;
+            top: 36px;
+            bottom: -16px;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .explainer-step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            flex-shrink: 0;
+            z-index: 2;
+        }
+
+        .explainer-step-content {
+            flex: 1;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+        }
+
+        /* ── Canvas Note Cards ─────────────────────────────────────── */
+        .canvas-note-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .canvas-note-card.arch    { border-left: 3px solid var(--blue-accent); }
+        .canvas-note-card.risk    { border-left: 3px solid var(--coral-accent); }
+        .canvas-note-card.todo    { border-left: 3px solid var(--amber-accent); }
+        .canvas-note-card.perf    { border-left: 3px solid var(--lime-accent); }
+
+        .note-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .note-type-badge {
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        .note-type-badge.arch { background: color-mix(in srgb, var(--blue-accent) 18%, transparent); color: var(--blue-accent); }
+        .note-type-badge.risk { background: color-mix(in srgb, var(--coral-accent) 18%, transparent); color: var(--coral-accent); }
+        .note-type-badge.todo { background: color-mix(in srgb, var(--amber-accent) 18%, transparent); color: var(--amber-accent); }
+        .note-type-badge.perf { background: color-mix(in srgb, var(--lime-accent) 18%, transparent); color: var(--lime-accent); }
+
+        .note-card-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* ── Blast Risk Bar ────────────────────────────────────────── */
+        .blast-risk-bar-wrap {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 6px 0;
+        }
+        .blast-risk-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--lime-accent), var(--amber-accent), var(--coral-accent));
+            transition: width 0.4s ease;
+        }
+
+        /* ── Empty State ───────────────────────────────────────────── */
+        .empty-state-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 32px 16px;
+            color: var(--text-tertiary);
+            font-size: 0.82rem;
+            text-align: center;
+        }
+        .empty-state-box .empty-icon {
+            font-size: 2rem;
+            opacity: 0.45;
+        }
+
+        /* ── Keyboard Hint Pills ───────────────────────────────────── */
+        .kbd {
+            display: inline-block;
+            padding: 1px 5px;
+            font-size: 0.65rem;
+            font-family: monospace;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ─── Toast Feedback ───────────────────────────────────────── -->
+    <div class="toast-bubble" id="toast"></div>
+
+    <!-- ─── Minimal Header ───────────────────────────────────────── -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="brand-icon">✱</div>
+            <div class="brand-title">/onBob <span>Atlas</span></div>
+
+            <!-- Repo name & stats — set dynamically from window.__ONBOB_DATA__ at boot -->
+            <div class="repo-pill-container">
+                <span class="repo-pill-label">Repo</span>
+                <span class="repo-pill-name" id="repoNameDisplay">—</span>
+                <span style="color:var(--border);margin:0 2px;">·</span>
+                <span id="repoLangDisplay" style="font-size:0.72rem;font-weight:600;color:var(--text-tertiary);">—</span>
+                <span style="color:var(--border);margin:0 2px;">·</span>
+                <span id="repoFileCountDisplay" style="font-size:0.72rem;font-weight:600;color:var(--text-tertiary);">—</span>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button class="pill-btn pill-btn-danger" onclick="openBlastModal()" title="Simulate what breaks if a pillar is changed">
+                💥 Blast Simulator
+            </button>
+            <button class="pill-btn" onclick="openFeatureExplainer(null, 'choreography')" title="Deep-dive into feature flows">
+                🧠 Explore Features
+            </button>
+            <button class="pill-btn" onclick="triggerStage2Prompt()" title="View step-by-step execution traces">
+                🔍 Traces
+            </button>
+            <button class="pill-btn" id="btnFitGraph" onclick="fitGraph()" title="Fit graph to screen (F)">
+                ⊞ Fit
+            </button>
+            <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode (T)">
+                🌓
+            </button>
+        </div>
+    </header>
+
+    <!-- ─── Main Resizable Layout ──────────────────────────────────── -->
+    <main class="app-layout" id="appLayout">
+
+        <!-- ─── Left Column: Architectural Blueprint ───────────────── -->
+        <section class="bento-column left-column" id="leftBlueprintCol">
+            <div class="column-header">
+                <div class="column-title-group">
+                    <span style="font-size: 1.1rem;">🏛️</span>
+                    <h2 class="column-title">Architectural Blueprint</h2>
+                    <span class="column-badge" id="leftLayersCount">4 Layers</span>
+                </div>
+                <span style="font-size: 0.72rem; color: var(--text-secondary);">Click card to focus in graph</span>
+            </div>
+
+            <!-- Blueprint Scroll Stage -->
+            <div class="blueprint-scroll-stage" id="blueprintStage">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+        <!-- ─── Draggable Resizer Divider ──────────────────────────── -->
+        <div class="layout-resizer-handle" id="layoutResizer" title="Drag to resize panels">
+            <div class="resizer-bar"></div>
+        </div>
+
+        <!-- ─── Right Column: Dependency Mesh & Dynamics ───────────── -->
+        <section class="bento-column right-column" id="rightMeshCol">
+            <div class="column-header">
+                <div class="column-title-group">
+                    <span style="font-size: 1.1rem;">🌐</span>
+                    <h2 class="column-title">Architecture Dynamics</h2>
+                </div>
+
+                <!-- View Switcher Tabs (Dependency Mesh FIRST by default) -->
+                <div class="tab-pill-group">
+                    <button class="tab-pill-btn active" id="tabMesh" onclick="switchRightView('mesh')">
+                        Dependency Mesh
+                    </button>
+                    <button class="tab-pill-btn" id="tabPillars" onclick="switchRightView('pillars')">
+                        Pillars
+                    </button>
+                </div>
+            </div>
+
+            <!-- View 1: Force-Directed Dependency Mesh (Active by Default) -->
+            <div class="mesh-view-container" id="meshView">
+                <div class="mesh-canvas-stage" id="meshCanvas">
+
+                    <svg class="graph-svg-main" id="graphSvg">
+                        <defs>
+                            <!-- High-Contrast Chevron Arrowhead (Resting) -->
+                            <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                                <path d="M 1 2 L 11 6 L 1 10 L 3.5 6 Z" fill="var(--arrow-color)"></path>
+                            </marker>
+                            <!-- Vivid Neon Arrowhead (Active Flow) -->
+                            <marker id="arrow-active" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+                                <path d="M 1 2 L 11 6 L 1 10 L 3.5 6 Z" fill="var(--lime-accent)"></path>
+                            </marker>
+                            <marker id="arrow-cyan" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+                                <path d="M 1 2 L 11 6 L 1 10 L 3.5 6 Z" fill="#38BDF8"></path>
+                            </marker>
+                            <marker id="arrow-amber" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+                                <path d="M 1 2 L 11 6 L 1 10 L 3.5 6 Z" fill="#F59E0B"></path>
+                            </marker>
+                            <marker id="arrow-pink" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+                                <path d="M 1 2 L 11 6 L 1 10 L 3.5 6 Z" fill="#EC4899"></path>
+                            </marker>
+                            <marker id="arrow-emerald" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+                                <path d="M 1 2 L 11 6 L 1 10 L 3.5 6 Z" fill="#10B981"></path>
+                            </marker>
+                            <linearGradient id="pulse-tail-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="var(--lime-accent)" stop-opacity="0"></stop>
+                                <stop offset="100%" stop-color="var(--lime-accent)" stop-opacity="1"></stop>
+                            </linearGradient>
+                        </defs>
+                        <!-- Zoomable Container Group -->
+                        <g id="graphZoomContainer">
+                            <g id="edgesLayer"></g>
+                            <g id="pulseLayer"></g>
+                            <g id="nodesLayer"></g>
+                        </g>
+                    </svg>
+
+                    <!-- Docked Playback & Arrow Semantic Toolbar -->
+                    <div class="graph-playback-bar" id="playbackBar">
+                        <span class="playback-label">Onboard Journey:</span>
+                        <select class="playback-feature-select" id="traceSelect" onchange="selectPlaybackTrace(this.value)">
+                            <!-- Populated dynamically -->
+                        </select>
+                        <span class="playback-step-badge" id="playbackStepBadge">Ready</span>
+                        <div class="playback-divider"></div>
+                        <button class="playback-ctrl-btn" onclick="stepPlayback(-1)" title="Step Back">⏮️</button>
+                        <button class="playback-ctrl-btn active-play" id="btnPlayPause" onclick="togglePlayPause()" title="Play / Pause">▶️</button>
+                        <button class="playback-ctrl-btn" onclick="stepPlayback(1)" title="Step Forward">⏭️</button>
+                        <div class="playback-divider"></div>
+                        <div class="speed-pill-group">
+                            <button class="speed-pill-btn" onclick="setPlaySpeed(0.5, this)">0.5x</button>
+                            <button class="speed-pill-btn active" onclick="setPlaySpeed(1, this)">1x</button>
+                            <button class="speed-pill-btn" onclick="setPlaySpeed(2, this)">2x</button>
+                        </div>
+                        <div class="playback-divider"></div>
+                        <!-- Arrow Semantic Key -->
+                        <div class="arrow-legend-inline" title="Arrow Key">
+                            <span class="legend-chip"><span class="legend-line sync"></span> Sync Call</span>
+                            <span class="legend-chip"><span class="legend-line async"></span> Async / DB</span>
+                            <span class="legend-chip"><span class="legend-arrow">➔</span> Caller ➔ Callee</span>
+                        </div>
+                    </div>
+
+                    <!-- Slide-In Node & Edge Inspector Panel (Code Drill-Down) -->
+                    <div class="node-inspector-panel" id="nodeInspector">
+                        <div class="inspector-header">
+                            <div>
+                                <div style="font-size: 0.88rem; font-weight: 800; color: var(--text-primary);" id="inspNodeName">Component Details</div>
+                                <span class="badge-pill subtle" id="inspNodeType">API</span>
+                            </div>
+                            <button class="inspector-close-btn" onclick="closeNodeInspector()">✕</button>
+                        </div>
+                        <div class="inspector-body">
+                            <!-- Day-1 Onboarding Brief Box -->
+                            <div class="onboarding-brief-box" id="inspOnboardBox">
+                                <div class="onboarding-brief-label">🧭 Day-1 Mental Model</div>
+                                <div class="onboarding-brief-text" id="inspOnboardMentalModel"></div>
+                                <div class="onboarding-invariant-tag" id="inspOnboardInvariant"></div>
+                            </div>
+                            <div>
+                                <div class="inspector-section-label" id="inspRoleLabel">Mission / Architectural Role</div>
+                                <p style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;" id="inspMission"></p>
+                            </div>
+                            <div class="inspector-divider"></div>
+                            <div>
+                                <div class="inspector-section-label" id="inspFileLabel">Source File Path</div>
+                                <div class="inspector-code-box" id="inspFilePath">backend/app/api/main.py:12</div>
+                            </div>
+                            <div id="inspReadingListWrap">
+                                <div class="inspector-divider"></div>
+                                <div class="inspector-section-label">📚 Day-1 Reading List</div>
+                                <div class="inspector-chip-wrap" id="inspReadingList"></div>
+                            </div>
+                            <div id="inspSymbolsWrap">
+                                <div class="inspector-divider"></div>
+                                <div class="inspector-section-label">Low-Level Code Symbols (Functions & Routes)</div>
+                                <div class="inspector-chip-wrap" id="inspSymbolsList">
+                                    <!-- Populated dynamically as clickable symbol chips -->
+                                </div>
+                            </div>
+                            <div id="inspSnippetWrap">
+                                <div class="inspector-divider"></div>
+                                <div class="inspector-section-label" id="inspSnippetTitle">Executing Code Snippet</div>
+                                <pre class="inspector-code-block" id="inspCodeSnippet"></pre>
+                            </div>
+                            <div class="inspector-divider"></div>
+                            <div>
+                                <div class="inspector-section-label" id="inspDepLabel">Downstream Dependents</div>
+                                <div class="inspector-chip-wrap" id="inspDependentsList">
+                                    <!-- Populated dynamically as clickable chips -->
+                                </div>
+                            </div>
+                            <div id="inspCallersWrap">
+                                <div class="inspector-section-label">Upstream Callers</div>
+                                <div class="inspector-chip-wrap" id="inspCallersList">
+                                    <!-- Populated dynamically as clickable chips -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View 2: Pillars List View -->
+            <div class="pillars-scroll-stage" id="pillarsView">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ─── Drawer: Feature Execution Flow ───────────────────────── -->
+    <div class="exec-drawer" id="execDrawer">
+        <div class="drawer-header">
+            <div>
+                <h3 style="font-size: 0.98rem; font-weight: 700; color: var(--text-primary);" id="drawerTitle">Execution Trace</h3>
+                <p style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">Step-by-step code execution path</p>
+            </div>
+            <button class="drawer-close-btn" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-body" id="drawerBody">
+            <!-- Step cards rendered dynamically -->
+        </div>
+    </div>
+
+    <!-- ─── Modal: Blast Radius Simulator ───────────────────────── -->
+    <div class="modal-overlay" id="blastOverlay" onclick="closeBlastModal()"></div>
+    <div class="modal-window" id="blastModal">
+        <div class="modal-header">
+            <div>
+                <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">💥 Blast Radius Simulator</h3>
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">Simulate downstream breakage if a core component is altered or removed</p>
+            </div>
+            <button class="drawer-close-btn" onclick="closeBlastModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Select Target Component:</div>
+            <div class="blast-pill-options" id="blastPillButtons">
+                <!-- Buttons rendered dynamically -->
+            </div>
+            <div id="blastScorecard">
+                <!-- Details rendered dynamically -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="pill-btn" onclick="copySafetyRunbook()">📋 Copy Safety Runbook</button>
+            <button class="pill-btn pill-btn-danger" onclick="triggerMeshBlastSimulation()">💥 Highlight Affected Mesh</button>
+    </div>
+
+    <!-- ─── Drawer: Feature-Level Codebase Explainer ─────────────── -->
+    <div class="modal-overlay" id="featureExplainerOverlay" onclick="closeFeatureExplainer()"></div>
+    <div class="feature-explainer-drawer" id="featureExplainerDrawer">
+        <div class="explainer-header">
+            <div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:1.2rem;">🧠</span>
+                    <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-primary);" id="explainerTitle">Feature-Level Codebase Explainer</h3>
+                </div>
+                <p style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px;" id="explainerSubtitle">Understanding the entire codebase through this feature's architectural flow</p>
+            </div>
+            <button class="drawer-close-btn" onclick="closeFeatureExplainer()">✕</button>
+        </div>
+        <div class="explainer-tabs-nav">
+            <button class="explainer-tab-btn active" id="tabExpChoreography" onclick="switchExplainerTab('choreography')">🌟 Feature 360° Flow</button>
+            <button class="explainer-tab-btn" id="tabExpLayers" onclick="switchExplainerTab('layers')">🏛️ Layer Responsibilities</button>
+            <button class="explainer-tab-btn" id="tabExpCode" onclick="switchExplainerTab('code')">💻 Code & Signatures</button>
+            <button class="explainer-tab-btn" id="tabExpInvariants" onclick="switchExplainerTab('invariants')">🛡️ Contracts & Invariants</button>
+            <button class="explainer-tab-btn" id="tabExpMulti" onclick="switchExplainerTab('multi')">🔀 Multi-Feature Contention</button>
+        </div>
+        <div class="explainer-body" id="explainerBody">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+
+    <script>
+window.__ONBOB_DATA__ = {
+  "tiangolo/full-stack-fastapi-template": {
+    "repo_name": "tiangolo/full-stack-fastapi-template",
+    "primary_lang": "Python · TypeScript",
+    "lang": "Python · TypeScript",
+    "file_count": 194,
+    "layers": [
+      {
+        "id": "layer_ui",
+        "tag": "Frontend & UI",
+        "accent": "#F87171",
+        "cards": [
+          {
+            "id": "frontend",
+            "name": "Frontend",
+            "icon": "🖥️",
+            "desc": "Delivers the user interface, client-side state, and API client integration.",
+            "file": "backend/app/email-templates/test_email.html:1",
+            "pillar": "frontend"
+          }
+        ]
+      },
+      {
+        "id": "layer_api",
+        "tag": "API Gateway & Ingress",
+        "accent": "#38BDF8",
+        "cards": [
+          {
+            "id": "ingress",
+            "name": "Ingress & API",
+            "icon": "🌐",
+            "desc": "Handles all inbound requests, protocol routing, and entrypoint dispatch.",
+            "file": "backend/app/api/main.py:1",
+            "pillar": "ingress"
+          }
+        ]
+      },
+      {
+        "id": "layer_logic",
+        "tag": "Business Logic",
+        "accent": "#A78BFA",
+        "cards": [
+          {
+            "id": "auth",
+            "name": "Auth & Identity",
+            "icon": "🔐",
+            "desc": "Manages authentication, authorization, tokens, and user identity.",
+            "file": "backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py:1",
+            "pillar": "auth"
+          },
+          {
+            "id": "core",
+            "name": "Core Engine",
+            "icon": "⚙️",
+            "desc": "Orchestrates business logic, domain rules, and processing pipelines.",
+            "file": "backend/app/crud.py:1",
+            "pillar": "core"
+          },
+          {
+            "id": "infra",
+            "name": "Infra & Config",
+            "icon": "🏗️",
+            "desc": "Provides shared utilities, configuration, and deployment infrastructure.",
+            "file": "backend/Dockerfile:1",
+            "pillar": "infra"
+          }
+        ]
+      },
+      {
+        "id": "layer_db",
+        "tag": "Data & Storage",
+        "accent": "#FBBF24",
+        "cards": [
+          {
+            "id": "data",
+            "name": "Data & Storage",
+            "icon": "🗄️",
+            "desc": "Owns all database models, migrations, queries, and persistence logic.",
+            "file": "backend/alembic.ini:1",
+            "pillar": "data"
+          }
+        ]
+      }
+    ],
+    "pillars": [
+      {
+        "id": "ingress",
+        "name": "Ingress & API",
+        "type": "api",
+        "icon": "🌐",
+        "mission": "Handles all inbound requests, protocol routing, and entrypoint dispatch.",
+        "onboarding_mental_model": "Think of Ingress & API as the handles all inbound requests, protocol routing, and entrypoint dispatch boundary.",
+        "onboarding_invariant": "All api operations must flow through Ingress & API.",
+        "reading_list": [
+          "backend/app/api/main.py:1",
+          "backend/app/api/routes/__init__.py:1",
+          "backend/app/api/routes/items.py:1"
+        ],
+        "color": "#3B82F6",
+        "team": "#team-backend",
+        "files": [
+          "backend/app/api/main.py",
+          "backend/app/api/routes/__init__.py",
+          "backend/app/api/routes/items.py",
+          "backend/app/api/routes/login.py",
+          "backend/app/api/routes/private.py",
+          "backend/app/api/routes/users.py"
+        ],
+        "signature": "def main()(...)→Response",
+        "symbols": [
+          {
+            "name": "main()",
+            "sig": "def main()(...)→Response",
+            "file": "backend/app/api/main.py:1",
+            "snippet": "# Discovered in main.py via static analysis."
+          },
+          {
+            "name": "__init__()",
+            "sig": "def __init__()(...)→Response",
+            "file": "backend/app/api/routes/__init__.py:1",
+            "snippet": "# Discovered in __init__.py via static analysis."
+          },
+          {
+            "name": "read_items()",
+            "sig": "def read_items()(...)→Response",
+            "file": "backend/app/api/routes/items.py:14",
+            "snippet": "# Discovered in items.py via static analysis."
+          }
+        ],
+        "code_snippet": "# Ingress & API\n# Mission: Handles all inbound requests, protocol routing, and entrypoint dispatch.\n# Files: 6",
+        "dependents": [
+          "auth"
+        ]
+      },
+      {
+        "id": "auth",
+        "name": "Auth & Identity",
+        "type": "logic",
+        "icon": "🔐",
+        "mission": "Manages authentication, authorization, tokens, and user identity.",
+        "onboarding_mental_model": "Think of Auth & Identity as the manages authentication, authorization, tokens, and user identity boundary.",
+        "onboarding_invariant": "All logic operations must flow through Auth & Identity.",
+        "reading_list": [
+          "backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py:1",
+          "backend/app/core/security.py:1",
+          "backend/app/email-templates/new_account.html:1"
+        ],
+        "color": "#10B981",
+        "team": "#team-security",
+        "files": [
+          "backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py",
+          "backend/app/core/security.py",
+          "backend/app/email-templates/new_account.html",
+          "backend/app/email-templates/reset_password.html",
+          "backend/tests/crud/test_user.py",
+          "backend/tests/utils/user.py"
+        ],
+        "signature": "def upgrade()(...)→Response",
+        "symbols": [
+          {
+            "name": "upgrade()",
+            "sig": "def upgrade()(...)→Response",
+            "file": "backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py:20",
+            "snippet": "# Discovered in fe56fa70289e_add_created_at_to_user_and_item.py via static analysis."
+          },
+          {
+            "name": "create_access_token()",
+            "sig": "def create_access_token()(...)→Response",
+            "file": "backend/app/core/security.py:22",
+            "snippet": "# Discovered in security.py via static analysis."
+          },
+          {
+            "name": "new_account()",
+            "sig": "def new_account()(...)→Response",
+            "file": "backend/app/email-templates/new_account.html:1",
+            "snippet": "# Discovered in new_account.html via static analysis."
+          }
+        ],
+        "code_snippet": "# Auth & Identity\n# Mission: Manages authentication, authorization, tokens, and user identity.\n# Files: 6",
+        "dependents": []
+      },
+      {
+        "id": "core",
+        "name": "Core Engine",
+        "type": "logic",
+        "icon": "⚙️",
+        "mission": "Orchestrates business logic, domain rules, and processing pipelines.",
+        "onboarding_mental_model": "Think of Core Engine as the orchestrates business logic, domain rules, and processing pipelines boundary.",
+        "onboarding_invariant": "All logic operations must flow through Core Engine.",
+        "reading_list": [
+          "backend/app/crud.py:1",
+          "backend/tests/crud/__init__.py:1"
+        ],
+        "color": "#8B5CF6",
+        "team": "#team-backend",
+        "files": [
+          "backend/app/crud.py",
+          "backend/tests/crud/__init__.py"
+        ],
+        "signature": "def create_user()(...)→Response",
+        "symbols": [
+          {
+            "name": "create_user()",
+            "sig": "def create_user()(...)→Response",
+            "file": "backend/app/crud.py:10",
+            "snippet": "# Discovered in crud.py via static analysis."
+          },
+          {
+            "name": "__init__()",
+            "sig": "def __init__()(...)→Response",
+            "file": "backend/tests/crud/__init__.py:1",
+            "snippet": "# Discovered in __init__.py via static analysis."
+          }
+        ],
+        "code_snippet": "# Core Engine\n# Mission: Orchestrates business logic, domain rules, and processing pipelines.\n# Files: 2",
+        "dependents": []
+      },
+      {
+        "id": "data",
+        "name": "Data & Storage",
+        "type": "db",
+        "icon": "🗄️",
+        "mission": "Owns all database models, migrations, queries, and persistence logic.",
+        "onboarding_mental_model": "Think of Data & Storage as the owns all database models, migrations, queries, and persistence logic boundary.",
+        "onboarding_invariant": "All db operations must flow through Data & Storage.",
+        "reading_list": [
+          "backend/alembic.ini:1",
+          "backend/app/alembic/README:1",
+          "backend/app/alembic/env.py:1"
+        ],
+        "color": "#F59E0B",
+        "team": "#team-platform",
+        "files": [
+          "backend/alembic.ini",
+          "backend/app/alembic/README",
+          "backend/app/alembic/env.py",
+          "backend/app/alembic/script.py.mako",
+          "backend/app/alembic/versions/1a31ce608336_add_cascade_delete_relationships.py",
+          "backend/app/alembic/versions/9c0a54914c78_add_max_length_for_string_varchar_.py"
+        ],
+        "signature": "def alembic()(...)→Response",
+        "symbols": [
+          {
+            "name": "alembic()",
+            "sig": "def alembic()(...)→Response",
+            "file": "backend/alembic.ini:1",
+            "snippet": "# Discovered in alembic.ini via static analysis."
+          },
+          {
+            "name": "README()",
+            "sig": "def README()(...)→Response",
+            "file": "backend/app/alembic/README:1",
+            "snippet": "# Discovered in README via static analysis."
+          },
+          {
+            "name": "get_url()",
+            "sig": "def get_url()(...)→Response",
+            "file": "backend/app/alembic/env.py:33",
+            "snippet": "# Discovered in env.py via static analysis."
+          }
+        ],
+        "code_snippet": "# Data & Storage\n# Mission: Owns all database models, migrations, queries, and persistence logic.\n# Files: 6",
+        "dependents": [
+          "ingress",
+          "auth",
+          "core"
+        ]
+      },
+      {
+        "id": "frontend",
+        "name": "Frontend",
+        "type": "ui",
+        "icon": "🖥️",
+        "mission": "Delivers the user interface, client-side state, and API client integration.",
+        "onboarding_mental_model": "Think of Frontend as the delivers the user interface, client-side state, and api client integration boundary.",
+        "onboarding_invariant": "All ui operations must flow through Frontend.",
+        "reading_list": [
+          "backend/app/email-templates/test_email.html:1",
+          "frontend/components.json:1",
+          "frontend/src/components/Admin/columns.tsx:1"
+        ],
+        "color": "#EC4899",
+        "team": "#team-frontend",
+        "files": [
+          "backend/app/email-templates/test_email.html",
+          "frontend/components.json",
+          "frontend/src/components/Admin/columns.tsx",
+          "frontend/src/components/Common/AuthLayout.tsx",
+          "frontend/src/components/Common/ErrorComponent.tsx",
+          "frontend/src/components/Common/Footer.tsx"
+        ],
+        "signature": "def test_email()(...)→Response",
+        "symbols": [
+          {
+            "name": "test_email()",
+            "sig": "def test_email()(...)→Response",
+            "file": "backend/app/email-templates/test_email.html:1",
+            "snippet": "# Discovered in test_email.html via static analysis."
+          },
+          {
+            "name": "components()",
+            "sig": "def components()(...)→Response",
+            "file": "frontend/components.json:1",
+            "snippet": "# Discovered in components.json via static analysis."
+          },
+          {
+            "name": "columns()",
+            "sig": "def columns()(...)→Response",
+            "file": "frontend/src/components/Admin/columns.tsx:1",
+            "snippet": "# Discovered in columns.tsx via static analysis."
+          }
+        ],
+        "code_snippet": "# Frontend\n# Mission: Delivers the user interface, client-side state, and API client integration.\n# Files: 6",
+        "dependents": [
+          "ingress",
+          "core"
+        ]
+      },
+      {
+        "id": "infra",
+        "name": "Infra & Config",
+        "type": "logic",
+        "icon": "🏗️",
+        "mission": "Provides shared utilities, configuration, and deployment infrastructure.",
+        "onboarding_mental_model": "Think of Infra & Config as the provides shared utilities, configuration, and deployment infrastructure boundary.",
+        "onboarding_invariant": "All logic operations must flow through Infra & Config.",
+        "reading_list": [
+          "backend/Dockerfile:1",
+          "backend/app/core/config.py:1",
+          "backend/app/utils.py:1"
+        ],
+        "color": "#06B6D4",
+        "team": "#team-platform",
+        "files": [
+          "backend/Dockerfile",
+          "backend/app/core/config.py",
+          "backend/app/utils.py",
+          "backend/scripts/lint.sh",
+          "backend/scripts/test.sh",
+          "backend/scripts/tests-start.sh"
+        ],
+        "signature": "def Dockerfile()(...)→Response",
+        "symbols": [
+          {
+            "name": "Dockerfile()",
+            "sig": "def Dockerfile()(...)→Response",
+            "file": "backend/Dockerfile:1",
+            "snippet": "# Discovered in Dockerfile via static analysis."
+          },
+          {
+            "name": "Settings()",
+            "sig": "def Settings()(...)→Response",
+            "file": "backend/app/core/config.py:35",
+            "snippet": "# Discovered in config.py via static analysis."
+          },
+          {
+            "name": "render_email_template()",
+            "sig": "def render_email_template()(...)→Response",
+            "file": "backend/app/utils.py:25",
+            "snippet": "# Discovered in utils.py via static analysis."
+          }
+        ],
+        "code_snippet": "# Infra & Config\n# Mission: Provides shared utilities, configuration, and deployment infrastructure.\n# Files: 6",
+        "dependents": [
+          "ingress",
+          "auth",
+          "data"
+        ]
+      }
+    ],
+    "features_menu": [
+      {
+        "id": "feat_ingress",
+        "num": "1",
+        "label": "🌐 Request Lifecycle",
+        "color": "#38BDF8",
+        "arrowMarker": "url(#arrow-cyan)",
+        "path": [
+          "ingress",
+          "infra",
+          "frontend"
+        ],
+        "desc": "Trace inbound request → routing → response dispatch.",
+        "contract": "Input: HTTP request → Output: JSON response",
+        "invariants": "Must traverse ingress pillar. Strict read-only scan.",
+        "edge_steps": {
+          "ingress->infra": {
+            "step": 1,
+            "call": "① main()",
+            "desc": "Discovered in main.py via static analysis.",
+            "snippet": "# backend/app/api/main.py:1"
+          }
+        }
+      },
+      {
+        "id": "feat_auth",
+        "num": "2",
+        "label": "🔐 Authentication Flow",
+        "color": "#A78BFA",
+        "arrowMarker": "url(#arrow-violet)",
+        "path": [
+          "auth",
+          "data",
+          "infra",
+          "infra"
+        ],
+        "desc": "Trace login → token issue → session validation.",
+        "contract": "Input: HTTP request → Output: JSON response",
+        "invariants": "Must traverse auth pillar. Strict read-only scan.",
+        "edge_steps": {
+          "auth->data": {
+            "step": 1,
+            "call": "① upgrade()",
+            "desc": "Discovered in fe56fa70289e_add_created_at_to_user_and_item.py via static analysis.",
+            "snippet": "# backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py:20"
+          }
+        }
+      },
+      {
+        "id": "feat_core",
+        "num": "3",
+        "label": "⚙️ Core Business Logic",
+        "color": "#34D399",
+        "arrowMarker": "url(#arrow-emerald)",
+        "path": [
+          "core",
+          "frontend",
+          "data",
+          "infra"
+        ],
+        "desc": "Trace domain logic → data transformation → result.",
+        "contract": "Input: HTTP request → Output: JSON response",
+        "invariants": "Must traverse core pillar. Strict read-only scan.",
+        "edge_steps": {
+          "core->frontend": {
+            "step": 1,
+            "call": "① create_user()",
+            "desc": "Discovered in crud.py via static analysis.",
+            "snippet": "# backend/app/crud.py:10"
+          }
+        }
+      },
+      {
+        "id": "feat_data",
+        "num": "4",
+        "label": "🗄️ Data Persistence Layer",
+        "color": "#FBBF24",
+        "arrowMarker": "url(#arrow-amber)",
+        "path": [
+          "data",
+          "infra"
+        ],
+        "desc": "Trace query → ORM model → database write → response.",
+        "contract": "Input: HTTP request → Output: JSON response",
+        "invariants": "Must traverse data pillar. Strict read-only scan.",
+        "edge_steps": {
+          "data->infra": {
+            "step": 1,
+            "call": "① alembic()",
+            "desc": "Discovered in alembic.ini via static analysis.",
+            "snippet": "# backend/alembic.ini:1"
+          }
+        }
+      },
+      {
+        "id": "feat_frontend",
+        "num": "5",
+        "label": "🖥️ Client Data Fetch",
+        "color": "#F87171",
+        "arrowMarker": "url(#arrow-rose)",
+        "path": [
+          "frontend"
+        ],
+        "desc": "Trace UI action → API call → state update → render.",
+        "contract": "Input: HTTP request → Output: JSON response",
+        "invariants": "Must traverse frontend pillar. Strict read-only scan.",
+        "edge_steps": {}
+      },
+      {
+        "id": "feat_infra",
+        "num": "6",
+        "label": "🏗️ Infrastructure Setup",
+        "color": "#38BDF8",
+        "arrowMarker": "url(#arrow-cyan)",
+        "path": [
+          "infra"
+        ],
+        "desc": "Trace config load → middleware → app bootstrap.",
+        "contract": "Input: HTTP request → Output: JSON response",
+        "invariants": "Must traverse infra pillar. Strict read-only scan.",
+        "edge_steps": {}
+      }
+    ],
+    "notes": [
+      {
+        "id": "note_1",
+        "type": "arch",
+        "title": "JWT Token Lifecycle",
+        "preview": "Auth pillar owns token creation and validation end-to-end.",
+        "targetNode": "auth",
+        "file": "backend/app/core/security.py:22",
+        "full_text": "The Auth & Identity pillar is the single owner of JWT tokens. create_access_token() signs with SECRET_KEY, verify_password() uses bcrypt. No other pillar should touch token internals."
+      },
+      {
+        "id": "note_2",
+        "type": "risk",
+        "title": "Frontend blast radius: CRITICAL",
+        "preview": "Frontend pillar scores 99/100 blast risk — 2 downstream dependents.",
+        "targetNode": "frontend",
+        "file": "frontend/src/components/Common/AuthLayout.tsx:1",
+        "full_text": "Frontend is a high-blast-radius pillar. Ingress and Core both depend on it. Changes here can silently break API routing. Always run the full test suite before modifying frontend components."
+      },
+      {
+        "id": "note_3",
+        "type": "todo",
+        "title": "Data layer has zero test coverage",
+        "preview": "data pillar: 0 test files found — add coverage before changing.",
+        "targetNode": "data",
+        "file": "backend/alembic.ini:1",
+        "full_text": "The Data & Storage pillar has test_coverage: -1 (no tests detected). Any migration or ORM change is unguarded. Priority: add at least one integration test per Alembic migration."
+      },
+      {
+        "id": "note_4",
+        "type": "perf",
+        "title": "SQLModel connection pool risk",
+        "preview": "All DB edges are synchronous — pool exhaustion risk under load.",
+        "targetNode": "data",
+        "file": "backend/app/alembic/env.py:33",
+        "full_text": "All database edges use synchronous SQLModel calls. Under concurrent load the connection pool can exhaust. Consider async SQLAlchemy or pool_size tuning in backend/app/core/config.py."
+      }
+    ],
+    "traces": {
+      "feat_ingress": {
+        "title": "Trace Flow: Ingress & API",
+        "steps": [
+          {
+            "title": "Entrypoint: Main",
+            "file": "backend/app/api/main.py:1",
+            "desc": "Discovered in main.py via static analysis."
+          },
+          {
+            "title": "Core Logic:   Init  ",
+            "file": "backend/app/api/routes/__init__.py:1",
+            "desc": "Discovered in __init__.py via static analysis."
+          },
+          {
+            "title": "Data Access: Items",
+            "file": "backend/app/api/routes/items.py:14",
+            "desc": "Discovered in items.py via static analysis."
+          },
+          {
+            "title": "Response / Output: Login",
+            "file": "backend/app/api/routes/login.py:24",
+            "desc": "Discovered in login.py via static analysis."
+          }
+        ]
+      },
+      "feat_auth": {
+        "title": "Trace Flow: Auth & Identity",
+        "steps": [
+          {
+            "title": "Entrypoint: Fe56Fa70289E Add Created At To User And Item",
+            "file": "backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py:20",
+            "desc": "Discovered in fe56fa70289e_add_created_at_to_user_and_item.py via static analysis."
+          },
+          {
+            "title": "Core Logic: Security",
+            "file": "backend/app/core/security.py:22",
+            "desc": "Discovered in security.py via static analysis."
+          },
+          {
+            "title": "Data Access: New Account",
+            "file": "backend/app/email-templates/new_account.html:1",
+            "desc": "Discovered in new_account.html via static analysis."
+          },
+          {
+            "title": "Response / Output: Reset Password",
+            "file": "backend/app/email-templates/reset_password.html:1",
+            "desc": "Discovered in reset_password.html via static analysis."
+          }
+        ]
+      },
+      "feat_core": {
+        "title": "Trace Flow: Core Engine",
+        "steps": [
+          {
+            "title": "Entrypoint: Crud",
+            "file": "backend/app/crud.py:10",
+            "desc": "Discovered in crud.py via static analysis."
+          },
+          {
+            "title": "Core Logic:   Init  ",
+            "file": "backend/tests/crud/__init__.py:1",
+            "desc": "Discovered in __init__.py via static analysis."
+          }
+        ]
+      },
+      "feat_data": {
+        "title": "Trace Flow: Data & Storage",
+        "steps": [
+          {
+            "title": "Entrypoint: Alembic",
+            "file": "backend/alembic.ini:1",
+            "desc": "Discovered in alembic.ini via static analysis."
+          },
+          {
+            "title": "Core Logic: Readme",
+            "file": "backend/app/alembic/README:1",
+            "desc": "Discovered in README via static analysis."
+          },
+          {
+            "title": "Data Access: Env",
+            "file": "backend/app/alembic/env.py:33",
+            "desc": "Discovered in env.py via static analysis."
+          },
+          {
+            "title": "Response / Output: Script.Py",
+            "file": "backend/app/alembic/script.py.mako:20",
+            "desc": "Discovered in script.py.mako via static analysis."
+          }
+        ]
+      },
+      "feat_frontend": {
+        "title": "Trace Flow: Frontend",
+        "steps": [
+          {
+            "title": "Entrypoint: Test Email",
+            "file": "backend/app/email-templates/test_email.html:1",
+            "desc": "Discovered in test_email.html via static analysis."
+          },
+          {
+            "title": "Core Logic: Components",
+            "file": "frontend/components.json:1",
+            "desc": "Discovered in components.json via static analysis."
+          },
+          {
+            "title": "Data Access: Columns",
+            "file": "frontend/src/components/Admin/columns.tsx:1",
+            "desc": "Discovered in columns.tsx via static analysis."
+          },
+          {
+            "title": "Response / Output: Authlayout",
+            "file": "frontend/src/components/Common/AuthLayout.tsx:1",
+            "desc": "Discovered in AuthLayout.tsx via static analysis."
+          }
+        ]
+      },
+      "feat_infra": {
+        "title": "Trace Flow: Infra & Config",
+        "steps": [
+          {
+            "title": "Entrypoint: Dockerfile",
+            "file": "backend/Dockerfile:1",
+            "desc": "Discovered in Dockerfile via static analysis."
+          },
+          {
+            "title": "Core Logic: Config",
+            "file": "backend/app/core/config.py:35",
+            "desc": "Discovered in config.py via static analysis."
+          },
+          {
+            "title": "Data Access: Utils",
+            "file": "backend/app/utils.py:25",
+            "desc": "Discovered in utils.py via static analysis."
+          },
+          {
+            "title": "Response / Output: Lint",
+            "file": "backend/scripts/lint.sh:1",
+            "desc": "Discovered in lint.sh via static analysis."
+          }
+        ]
+      }
+    },
+    "blast": {
+      "ingress": {
+        "title": "Ingress & API (backend/app/api/main.py:1)",
+        "risk_score": 84,
+        "risk_level": "high",
+        "direct_breakage": [
+          "auth: callers of Ingress & API lose this dependency"
+        ],
+        "downstream_impact": [
+          "All 1 downstream pillar(s) affected",
+          "49 files become unreachable"
+        ],
+        "db_integrity": [
+          "No active transactions at risk"
+        ],
+        "safety_tests": "Run: pytest backend/tests/api/routes/__init__.py",
+        "emergency_contacts": "#team-backend · @oncall-lead"
+      },
+      "auth": {
+        "title": "Auth & Identity (backend/app/alembic/versions/fe56fa70289e_add_created_at_to_user_and_item.py:1)",
+        "risk_score": 61,
+        "risk_level": "moderate",
+        "direct_breakage": [
+          "Internal callers of Auth & Identity module break"
+        ],
+        "downstream_impact": [
+          "No downstream pillars detected",
+          "24 files become unreachable"
+        ],
+        "db_integrity": [
+          "No active transactions at risk"
+        ],
+        "safety_tests": "Run: pytest backend/tests/crud/test_user.py",
+        "emergency_contacts": "#team-security · @oncall-lead"
+      },
+      "core": {
+        "title": "Core Engine (backend/app/crud.py:1)",
+        "risk_score": 50,
+        "risk_level": "moderate",
+        "direct_breakage": [
+          "Internal callers of Core Engine module break"
+        ],
+        "downstream_impact": [
+          "No downstream pillars detected",
+          "2 files become unreachable"
+        ],
+        "db_integrity": [
+          "No active transactions at risk"
+        ],
+        "safety_tests": "Run: pytest backend/tests/crud/__init__.py",
+        "emergency_contacts": "#team-backend · @oncall-lead"
+      },
+      "data": {
+        "title": "Data & Storage (backend/alembic.ini:1)",
+        "risk_score": 86,
+        "risk_level": "high",
+        "direct_breakage": [
+          "ingress: callers of Data & Storage lose this dependency",
+          "auth: callers of Data & Storage lose this dependency",
+          "core: callers of Data & Storage lose this dependency"
+        ],
+        "downstream_impact": [
+          "All 3 downstream pillar(s) affected",
+          "12 files become unreachable"
+        ],
+        "db_integrity": [
+          "In-flight transactions may be uncommitted",
+          "Connection pool may exhaust"
+        ],
+        "safety_tests": "No test files found in Data & Storage — add coverage before changing",
+        "emergency_contacts": "#team-platform · @oncall-lead"
+      },
+      "frontend": {
+        "title": "Frontend (backend/app/email-templates/test_email.html:1)",
+        "risk_score": 99,
+        "risk_level": "critical",
+        "direct_breakage": [
+          "ingress: callers of Frontend lose this dependency",
+          "core: callers of Frontend lose this dependency"
+        ],
+        "downstream_impact": [
+          "All 2 downstream pillar(s) affected",
+          "52 files become unreachable"
+        ],
+        "db_integrity": [
+          "No active transactions at risk"
+        ],
+        "safety_tests": "Run: npm test -- backend/app/email-templates/test_email.html",
+        "emergency_contacts": "#team-frontend · @oncall-lead"
+      },
+      "infra": {
+        "title": "Infra & Config (backend/Dockerfile:1)",
+        "risk_score": 88,
+        "risk_level": "critical",
+        "direct_breakage": [
+          "ingress: callers of Infra & Config lose this dependency",
+          "auth: callers of Infra & Config lose this dependency",
+          "data: callers of Infra & Config lose this dependency"
+        ],
+        "downstream_impact": [
+          "All 3 downstream pillar(s) affected",
+          "28 files become unreachable"
+        ],
+        "db_integrity": [
+          "In-flight transactions may be uncommitted",
+          "Connection pool may exhaust"
+        ],
+        "safety_tests": "Run: npm test -- backend/scripts/test.sh",
+        "emergency_contacts": "#team-platform · @oncall-lead"
+      }
+    }
+  }
+};
+</script>
+    <!-- ─── Repo Data Injection Point ────────────────────────────────
+         When onBob generates a new atlas, it replaces this block with:
+           <script>
+           window.__ONBOB_DATA__ = { "org/repo": { ...pillar data... } };
+           </script>
+         The template engine below reads window.__ONBOB_DATA__ at boot.
+    ─────────────────────────────────────────────────────────────────── -->
+
+    <!-- ─── Architecture Data Engine ────────────────────────────── -->
+    <script>
+        // Guard: window.__ONBOB_DATA__ must be injected before this script.
+        // If missing (e.g. opened as a blank template), show a helpful prompt.
+        if (!window.__ONBOB_DATA__ || Object.keys(window.__ONBOB_DATA__).length === 0) {
+            window.__ONBOB_DATA__ = {
+                "example/repo": {
+                    repo_name: "example/repo — run /onBob to populate",
+                    file_count: 0,
+                    primary_lang: "—",
+                    layers: [],
+                    pillars: [],
+                    features_menu: [],
+                    notes: [],
+                    traces: {},
+                    blast: {}
+                }
+            };
+        }
+
+        const REPO_PROFILES = window.__ONBOB_DATA__;
+
+        // ─── INTENTIONALLY LEFT BLANK ─────────────────────────────────
+        // All repo-specific data is injected via window.__ONBOB_DATA__.
+        // To add a new repo: run /onBob in IBM Bob against your workspace.
+        // ──────────────────────────────────────────────────────────────
+
+        // ═════════════════════════════════════════════════════════════
+        // STATE VARIABLES
+        // ═════════════════════════════════════════════════════════════
+        const _firstProfileKey = Object.keys(REPO_PROFILES)[0];
+        let currentProfileKey = _firstProfileKey;
+        let currentData = REPO_PROFILES[currentProfileKey];
+        let currentRightView = 'mesh';
+        let activePillarId = null;
+        let currentBlastTarget = '';
+
+        // Feature-Level Flow & Notes State
+        const _firstFeatureId = (currentData.features_menu && currentData.features_menu.length > 0)
+            ? currentData.features_menu[0].id : '';
+        let activeFeatureIds = new Set([_firstFeatureId]);
+        let canvasNotesVisible = true;
+        let activeExplainerTab = 'choreography';
+        let activeExplainerFeatureId = _firstFeatureId;
+
+        // D3 Force Graph State
+        let simulation = null;
+        let graphNodes = [];
+        let graphLinks = [];
+        let zoomBehavior = null;
+        let currentTransform = d3.zoomIdentity;
+
+        // Playback Engine State
+        let activePlaybackTrace = null;
+        let playbackStepIndex = 0;
+        let isPlaying = false;
+        let playbackTimer = null;
+        let playbackSpeed = 1.0; // 0.5x, 1x, 2x
+
+        // ═════════════════════════════════════════════════════════════
+        // INIT & PROFILE SWITCHING
+        // ═════════════════════════════════════════════════════════════
+        function switchRepoProfile(profileKey) {
+            currentProfileKey = profileKey;
+            currentData = REPO_PROFILES[profileKey] || REPO_PROFILES[Object.keys(REPO_PROFILES)[0]];
+            activePillarId = null;
+            stopPlayback();
+
+            // Default to first feature active
+            activeFeatureIds.clear();
+            if (currentData.features_menu && currentData.features_menu.length > 0) {
+                activeFeatureIds.add(currentData.features_menu[0].id);
+                activeExplainerFeatureId = currentData.features_menu[0].id;
+            }
+
+            document.getElementById('leftLayersCount').innerText = `${currentData.layers.length} Layers`;
+
+            renderBlueprintStage();
+            renderPillarsList();
+            populatePlaybackTraces();
+
+            if (currentRightView === 'mesh') {
+                initForceGraph();
+            }
+
+            closeNodeInspector();
+            showToast(`Loaded ${currentData.repo_name}`);
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // LEFT PANE: ARCHITECTURAL BLUEPRINT
+        // ═════════════════════════════════════════════════════════════
+        function renderBlueprintStage() {
+            const stage = document.getElementById('blueprintStage');
+            stage.innerHTML = '';
+
+            currentData.layers.forEach((layer, layerIdx) => {
+                const layerEl = document.createElement('div');
+                layerEl.className = 'bento-layer-card';
+                layerEl.dataset.layer = layer.id;
+
+                layerEl.innerHTML = `
+                    <div class="layer-top-meta">
+                        <div class="layer-pill-tag">
+                            <span class="layer-dot" style="background: ${layer.accent};"></span>
+                            <span>${layer.tag}</span>
+                        </div>
+                        <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary);">
+                            ${layer.cards.length} Component${layer.cards.length > 1 ? 's' : ''}
+                        </span>
+                    </div>
+                    <div class="layer-items-grid">
+                        ${layer.cards.map(c => `
+                            <div class="component-card ${activePillarId === c.pillar ? 'selected' : ''}"
+                                 data-pillar="${c.pillar}"
+                                 onclick="handleNodeCardClick('${c.pillar}')">
+                                <div class="component-header">
+                                    <div class="component-icon-wrap">${c.icon}</div>
+                                    <div class="component-title">${c.name}</div>
+                                </div>
+                                <div class="component-desc">${c.desc}</div>
+                                <div class="component-footer">
+                                    <span class="component-file-chip" title="${c.file}">📄 ${c.file}</span>
+                                    <span class="component-arrow">➔</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                stage.appendChild(layerEl);
+
+                // Directed flow divider
+                if (layerIdx < currentData.layers.length - 1) {
+                    const divider = document.createElement('div');
+                    divider.className = 'flow-divider';
+                    divider.innerHTML = `
+                        <div class="flow-line"></div>
+                        <span class="flow-chip">▼ Directed Flow</span>
+                        <div class="flow-line"></div>
+                    `;
+                    stage.appendChild(divider);
+                }
+            });
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // RIGHT PANE: TAB SWITCHER
+        // ═════════════════════════════════════════════════════════════
+        function switchRightView(viewName) {
+            currentRightView = viewName;
+            document.getElementById('tabMesh').classList.toggle('active', viewName === 'mesh');
+            document.getElementById('tabPillars').classList.toggle('active', viewName === 'pillars');
+
+            const meshContainer = document.getElementById('meshView');
+            const pillarsContainer = document.getElementById('pillarsView');
+
+            if (viewName === 'mesh') {
+                meshContainer.style.display = 'flex';
+                pillarsContainer.classList.remove('active');
+                setTimeout(initForceGraph, 60);
+            } else {
+                meshContainer.style.display = 'none';
+                pillarsContainer.classList.add('active');
+                stopPlayback();
+            }
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // D3 FORCE-DIRECTED GRAPH ENGINE (FLUID, SPACIOUS & CODE-AWARE)
+        // ═════════════════════════════════════════════════════════════
+        let edgeHitSelection = null;
+        let edgeLabelSelection = null;
+
+        function initForceGraph() {
+            const container = document.getElementById('meshCanvas');
+            const svg = d3.select('#graphSvg');
+            const zoomGroup = d3.select('#graphZoomContainer');
+            const edgesLayer = d3.select('#edgesLayer');
+            const nodesLayer = d3.select('#nodesLayer');
+
+            const width = container.clientWidth || 900;
+            const height = container.clientHeight || 560;
+
+            // Architectural layer grouping for spacious, open, fluid layout (No rigid tier boxes)
+            const layerOrder = { ui: 0, api: 1, logic: 2, db: 3, queue: 2, analytics: 3 };
+            const layerBuckets = {};
+            currentData.pillars.forEach(p => {
+                const l = layerOrder[p.type] !== undefined ? layerOrder[p.type] : 1;
+                if (!layerBuckets[l]) layerBuckets[l] = [];
+                layerBuckets[l].push(p);
+            });
+
+            const padX = Math.max(100, width * 0.12);
+            const usableW = Math.max(760, width - 2 * padX);
+
+            // Open, spacious coordinates across the full unboxed canvas
+            graphNodes = currentData.pillars.map(p => {
+                const labelWidth = Math.max(190, p.name.length * 8 + 68);
+                const labelHeight = 48;
+                const l = layerOrder[p.type] !== undefined ? layerOrder[p.type] : 1;
+                const bucket = layerBuckets[l] || [p];
+                const rank = bucket.indexOf(p);
+                const totalInBucket = bucket.length;
+
+                const posX = padX + (l / 3.0) * usableW;
+                const posY = (height / (totalInBucket + 1)) * (rank + 1);
+
+                return {
+                    id: p.id,
+                    name: p.name,
+                    type: p.type || 'logic',
+                    icon: p.icon,
+                    mission: p.mission,
+                    onboarding_mental_model: p.onboarding_mental_model,
+                    onboarding_invariant: p.onboarding_invariant,
+                    reading_list: p.reading_list || [],
+                    files: p.files,
+                    signature: p.signature,
+                    symbols: p.symbols || [],
+                    code_snippet: p.code_snippet || '',
+                    team: p.team,
+                    dependents: p.dependents || [],
+                    width: labelWidth,
+                    height: labelHeight,
+                    x: posX,
+                    y: posY,
+                    targetX: posX,
+                    targetY: posY
+                };
+            });
+
+            graphLinks = [];
+            graphNodes.forEach(src => {
+                src.dependents.forEach(depId => {
+                    const targetNode = graphNodes.find(n => n.id === depId);
+                    if (targetNode) {
+                        const isAsync = src.type === 'ui' || targetNode.type === 'db';
+                        graphLinks.push({
+                            source: src.id,
+                            target: targetNode.id,
+                            id: `${src.id}->${targetNode.id}`,
+                            async: isAsync,
+                            defaultCall: isAsync ? (src.type === 'ui' ? 'REST HTTP' : 'SQL / DB Pool') : 'In-Process',
+                            defaultDesc: isAsync ? (src.type === 'ui' ? 'Network boundary API call' : 'Database connection pool transaction') : 'Synchronous in-process invocation'
+                        });
+                    }
+                });
+            });
+
+            // Zoom & Pan Behavior (gentle, fluid)
+            zoomBehavior = d3.zoom()
+                .scaleExtent([0.35, 2.8])
+                .on('zoom', (event) => {
+                    currentTransform = event.transform;
+                    zoomGroup.attr('transform', event.transform);
+                });
+
+            svg.call(zoomBehavior);
+
+            // Force Physics Simulation (Silky smooth, never snaps or compacts, completely open canvas)
+            if (simulation) simulation.stop();
+
+            simulation = d3.forceSimulation(graphNodes)
+                .force('link', d3.forceLink(graphLinks).id(d => d.id).distance(220).strength(0.30))
+                .force('charge', d3.forceManyBody().strength(-240))
+                .force('collide', d3.forceCollide().radius(115).strength(0.85))
+                .force('x', d3.forceX(d => d.targetX).strength(0.12))
+                .force('y', d3.forceY(d => d.targetY).strength(0.15))
+                .velocityDecay(0.65)
+                .alphaDecay(0.02);
+
+            // Clear Edges and Nodes Layers
+            edgesLayer.selectAll('*').remove();
+            nodesLayer.selectAll('*').remove();
+
+            // 1. Visible path lines
+            const edgeSelection = edgesLayer.selectAll('path.graph-edge-path')
+                .data(graphLinks, d => d.id)
+                .join('path')
+                .attr('class', d => `graph-edge-path ${d.async ? 'async-edge' : ''}`)
+                .attr('id', d => `edge-${typeof d.source === 'object' ? d.source.id : d.source}-${typeof d.target === 'object' ? d.target.id : d.target}`)
+                .attr('marker-end', 'url(#arrow)');
+
+            // 2. Invisible wide hit-areas for easy hovering & clicking
+            edgeHitSelection = edgesLayer.selectAll('path.edge-hit-area')
+                .data(graphLinks, d => d.id)
+                .join('path')
+                .attr('class', 'edge-hit-area')
+                .on('click', (event, d) => {
+                    event.stopPropagation();
+                    const sId = typeof d.source === 'object' ? d.source.id : d.source;
+                    const tId = typeof d.target === 'object' ? d.target.id : d.target;
+                    openEdgeInspector(sId, tId);
+                });
+
+            // 3. Edge Call Labels (Micro-pills centered on curve)
+            edgeLabelSelection = edgesLayer.selectAll('g.edge-label-g')
+                .data(graphLinks, d => d.id)
+                .join('g')
+                .attr('class', 'edge-label-g')
+                .attr('id', d => `edge-lbl-${typeof d.source === 'object' ? d.source.id : d.source}-${typeof d.target === 'object' ? d.target.id : d.target}`)
+                .on('click', (event, d) => {
+                    event.stopPropagation();
+                    const sId = typeof d.source === 'object' ? d.source.id : d.source;
+                    const tId = typeof d.target === 'object' ? d.target.id : d.target;
+                    openEdgeInspector(sId, tId);
+                });
+
+            edgeLabelSelection.append('rect')
+                .attr('class', 'edge-lbl-bg')
+                .attr('x', -45)
+                .attr('y', -10)
+                .attr('width', 90)
+                .attr('height', 20);
+
+            edgeLabelSelection.append('text')
+                .attr('class', 'edge-lbl-text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', 4)
+                .text(d => d.defaultCall);
+
+            // Render Nodes
+            const nodeSelection = nodesLayer.selectAll('g.graph-node-group')
+                .data(graphNodes, d => d.id)
+                .join('g')
+                .attr('class', 'graph-node-group')
+                .attr('id', d => `node-g-${d.id}`)
+                .call(d3.drag()
+                    .on('start', (event, d) => {
+                        if (!event.active) simulation.alphaTarget(0.2).restart();
+                        d.fx = d.x;
+                        d.fy = d.y;
+                    })
+                    .on('drag', (event, d) => {
+                        d.fx = event.x;
+                        d.fy = event.y;
+                    })
+                    .on('end', (event, d) => {
+                        if (!event.active) simulation.alphaTarget(0);
+                        d.fx = null;
+                        d.fy = null;
+                    })
+                );
+
+            nodeSelection.html(d => `
+                <foreignObject width="${d.width}" height="${d.height + 24}" x="${-d.width / 2}" y="${-d.height / 2 - 12}" style="overflow: visible;">
+                    <div xmlns="http://www.w3.org/1999/xhtml"
+                         class="graph-node-pill ${activePillarId === d.id ? 'selected' : ''}"
+                         id="node-pill-${d.id}"
+                         data-type="${d.type}"
+                         onclick="selectGraphNode('${d.id}')">
+                        <span class="convergence-badge" id="conv-badge-${d.id}" style="display:none;"></span>
+                        <span class="node-icon-symbol">${d.icon}</span>
+                        <div class="node-text-wrap">
+                            <span class="node-name-text">${d.name}</span>
+                            <span class="node-sub-text">${d.type.toUpperCase()} · ${d.dependents.length} deps</span>
+                        </div>
+                        <span class="node-type-dot"></span>
+                    </div>
+                </foreignObject>
+            `);
+
+            // Tick Update with Box-Ray Docking
+            simulation.on('tick', () => {
+                nodeSelection.attr('transform', d => `translate(${d.x}, ${d.y})`);
+
+                edgeSelection.attr('d', d => {
+                    const src = d.source;
+                    const dst = d.target;
+                    const targetIntersection = getBoxRayIntersection(src, dst, dst.width, dst.height);
+                    const sourceIntersection = getBoxRayIntersection(dst, src, src.width, src.height);
+
+                    const midX = (sourceIntersection.x + targetIntersection.x) / 2;
+                    const midY = (sourceIntersection.y + targetIntersection.y) / 2;
+                    const dx = targetIntersection.x - sourceIntersection.x;
+                    const dy = targetIntersection.y - sourceIntersection.y;
+                    const curveOffset = Math.sin((d.source.index || 0) * 1.5) * 20;
+
+                    const ctrlX = midX - (dy / Math.hypot(dx, dy || 1)) * curveOffset;
+                    const ctrlY = midY + (dx / Math.hypot(dx, dy || 1)) * curveOffset;
+
+                    d.midX = (sourceIntersection.x + 2 * ctrlX + targetIntersection.x) / 4;
+                    d.midY = (sourceIntersection.y + 2 * ctrlY + targetIntersection.y) / 4;
+
+                    return `M ${sourceIntersection.x} ${sourceIntersection.y} Q ${ctrlX} ${ctrlY} ${targetIntersection.x} ${targetIntersection.y}`;
+                });
+
+                edgesLayer.selectAll('path.edge-hit-area').attr('d', (d, i) => {
+                    const node = edgeSelection.nodes()[i];
+                    return node ? node.getAttribute('d') : '';
+                });
+
+                edgeLabelSelection.attr('transform', d => `translate(${d.midX || 0}, ${d.midY || 0})`);
+            });
+
+            highlightActiveFeatureFlows();
+
+            if (activePillarId) {
+                highlightGraphNode(activePillarId);
+            }
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // FEATURE FLOW HIGHLIGHTING & LOW-LEVEL CALL LABELS
+        // ═════════════════════════════════════════════════════════════
+        function highlightActiveFeatureFlows() {
+            const activeFeatures = (currentData.features_menu || []).filter(f => activeFeatureIds.has(f.id));
+
+            // Count node occurrences across all active features
+            const nodeCounts = {};
+            const activeNodesSet = new Set();
+            const activeEdgesMap = new Map();
+            const edgeStepLabelsMap = new Map();
+
+            activeFeatures.forEach(f => {
+                f.path.forEach((nodeId, idx) => {
+                    nodeCounts[nodeId] = (nodeCounts[nodeId] || 0) + 1;
+                    activeNodesSet.add(nodeId);
+
+                    if (idx < f.path.length - 1) {
+                        const src = nodeId;
+                        const dst = f.path[idx + 1];
+                        const key1 = `${src}->${dst}`;
+                        const key2 = `${dst}->${src}`;
+                        if (!activeEdgesMap.has(key1) && !activeEdgesMap.has(key2)) {
+                            activeEdgesMap.set(key1, []);
+                        }
+                        const list = activeEdgesMap.get(key1) || activeEdgesMap.get(key2);
+                        list.push(f.color);
+
+                        // Check if feature has specific edge_steps
+                        if (f.edge_steps && (f.edge_steps[key1] || f.edge_steps[key2])) {
+                            const step = f.edge_steps[key1] || f.edge_steps[key2];
+                            edgeStepLabelsMap.set(key1, step.call);
+                            edgeStepLabelsMap.set(key2, step.call);
+                        }
+                    }
+                });
+            });
+
+            // Update Nodes & Convergence Badges
+            d3.selectAll('g.graph-node-group').each(function(d) {
+                if (!d || !d.id) return;
+                const isTraversed = activeNodesSet.size === 0 || activeNodesSet.has(d.id);
+                const count = nodeCounts[d.id] || 0;
+                const pill = d3.select(this).select('.graph-node-pill');
+
+                pill.classed('dimmed', !isTraversed && activeNodesSet.size > 0);
+
+                const badge = document.getElementById(`conv-badge-${d.id}`);
+                if (badge) {
+                    if (count > 1) {
+                        badge.innerText = `🔥 ${count} Flows Converge`;
+                        badge.style.display = 'inline-flex';
+                        pill.style('border-color', '#E11D48');
+                    } else {
+                        badge.style.display = 'none';
+                        pill.style('border-color', '');
+                    }
+                }
+            });
+
+            // Update Edge Visuals and Call Labels
+            d3.selectAll('path.graph-edge-path').each(function(d) {
+                const srcId = typeof d.source === 'object' ? d.source.id : d.source;
+                const dstId = typeof d.target === 'object' ? d.target.id : d.target;
+                const key1 = `${srcId}->${dstId}`;
+                const key2 = `${dstId}->${srcId}`;
+                const colors = activeEdgesMap.get(key1) || activeEdgesMap.get(key2);
+
+                const edge = d3.select(this);
+                const labelG = d3.select(`#edge-lbl-${srcId}-${dstId}`);
+
+                if (colors && colors.length > 0) {
+                    edge.classed('dimmed-edge', false);
+                    edge.classed('active-flow', true);
+                    edge.style('stroke', colors[0]);
+                    edge.style('stroke-width', colors.length > 1 ? '4.5px' : '3.5px');
+                    const firstFeat = activeFeatures.find(f => f.color === colors[0]);
+                    edge.attr('marker-end', firstFeat ? firstFeat.arrowMarker : 'url(#arrow-active)');
+
+                    // Update label to step call
+                    const callText = edgeStepLabelsMap.get(key1) || edgeStepLabelsMap.get(key2) || d.defaultCall;
+                    if (labelG && !labelG.empty()) {
+                        const txtEl = labelG.select('.edge-lbl-text');
+                        const bgEl = labelG.select('.edge-lbl-bg');
+                        txtEl.text(callText).classed('active-flow-step', true);
+                        bgEl.classed('active-flow-step', true);
+                        const textLen = callText.length;
+                        const w = Math.max(90, textLen * 7.2 + 16);
+                        bgEl.attr('x', -w / 2).attr('width', w);
+                    }
+                } else {
+                    const isAnyFlow = activeNodesSet.size > 0;
+                    edge.classed('dimmed-edge', isAnyFlow);
+                    edge.classed('active-flow', false);
+                    edge.style('stroke', '');
+                    edge.style('stroke-width', '');
+                    edge.attr('marker-end', 'url(#arrow)');
+
+                    if (labelG && !labelG.empty()) {
+                        const txtEl = labelG.select('.edge-lbl-text');
+                        const bgEl = labelG.select('.edge-lbl-bg');
+                        txtEl.text(d.defaultCall).classed('active-flow-step', false);
+                        bgEl.classed('active-flow-step', false);
+                        const w = Math.max(80, d.defaultCall.length * 7 + 14);
+                        bgEl.attr('x', -w / 2).attr('width', w);
+                    }
+                }
+            });
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // FEATURE-LEVEL CODEBASE EXPLAINER CANVAS
+        // ═════════════════════════════════════════════════════════════
+        function openFeatureExplainer(featureId, tab) {
+            const feat = (featureId && currentData.features_menu.find(f => f.id === featureId)) ||
+                         currentData.features_menu.find(f => activeFeatureIds.has(f.id)) ||
+                         currentData.features_menu[0];
+            if (!feat) return;
+
+            activeExplainerFeatureId = feat.id;
+            if (tab) activeExplainerTab = tab;
+
+            document.getElementById('explainerTitle').innerText = `${feat.num}. ${feat.label}`;
+            document.getElementById('explainerSubtitle').innerText = `Explaining the entire codebase at the Feature Level (${feat.path.length} hops)`;
+
+            switchExplainerTab(activeExplainerTab);
+
+            document.getElementById('featureExplainerOverlay').classList.add('visible');
+            document.getElementById('featureExplainerDrawer').classList.add('open');
+        }
+
+        function openFeatureExplainerFromNote(noteId) {
+            const note = (currentData.notes || []).find(n => n.id === noteId);
+            if (!note) return;
+
+            const relevantFeature = currentData.features_menu.find(f => f.path.includes(note.targetNode)) || currentData.features_menu[0];
+            openFeatureExplainer(relevantFeature.id, 'invariants');
+        }
+
+        function closeFeatureExplainer() {
+            document.getElementById('featureExplainerOverlay').classList.remove('visible');
+            document.getElementById('featureExplainerDrawer').classList.remove('open');
+        }
+
+        function switchExplainerTab(tabName) {
+            activeExplainerTab = tabName;
+            const tabs = ['choreography', 'layers', 'code', 'invariants', 'multi'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tabExp${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if (btn) btn.classList.toggle('active', t === tabName);
+            });
+            renderExplainerTabContent();
+        }
+
+        function renderExplainerTabContent() {
+            const body = document.getElementById('explainerBody');
+            const feat = currentData.features_menu.find(f => f.id === activeExplainerFeatureId) || currentData.features_menu[0];
+            if (!body || !feat) return;
+
+            const pathPillars = feat.path.map(id => currentData.pillars.find(p => p.id === id)).filter(Boolean);
+
+            if (activeExplainerTab === 'choreography') {
+                body.innerHTML = `
+                    <div class="explainer-callout-box" style="border-left: 4px solid ${feat.color};">
+                        <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:${feat.color};margin-bottom:4px;">Feature Overview</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;">${feat.label}</div>
+                        <p style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5;">${feat.desc}</p>
+                    </div>
+
+                    <div>
+                        <div style="font-size:0.78rem;font-weight:700;color:var(--text-primary);margin-bottom:12px;">Step-by-Step Architectural Choreography</div>
+                        <div style="display:flex;flex-direction:column;gap:12px;">
+                            ${pathPillars.map((p, idx) => `
+                                <div class="explainer-layer-step">
+                                    <div class="explainer-step-number" style="border-color:${feat.color};color:${feat.color};">${idx + 1}</div>
+                                    <div class="explainer-step-content">
+                                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                                            <span style="font-weight:700;font-size:0.82rem;color:var(--text-primary);">${p.icon} ${p.name}</span>
+                                            <span class="badge-pill subtle">${p.type.toUpperCase()}</span>
+                                        </div>
+                                        <p style="font-size:0.74rem;color:var(--text-secondary);line-height:1.45;margin-bottom:6px;">${p.mission}</p>
+                                        <span class="component-file-chip">📄 ${(p.files && p.files[0]) || 'system.py'}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+                        <button class="pill-btn" onclick="closeFeatureExplainer(); selectPlaybackTrace('${feat.id}'); startPlayback();" style="background:var(--lime-accent);color:var(--lime-text);font-weight:700;">
+                            ▶️ Animate Flow in Graph
+                        </button>
+                    </div>
+                `;
+            } else if (activeExplainerTab === 'layers') {
+                body.innerHTML = `
+                    <div style="font-size:0.78rem;font-weight:700;color:var(--text-primary);margin-bottom:10px;">Layer Responsibilities for "${feat.label}"</div>
+                    <div style="display:flex;flex-direction:column;gap:14px;">
+                        ${currentData.layers.map(layer => {
+                            const componentsInLayer = layer.cards.filter(c => feat.path.includes(c.pillar));
+                            if (componentsInLayer.length === 0) return '';
+                            return `
+                                <div style="background:var(--surface-subtle);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;">
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                                        <span class="layer-dot" style="background:${layer.accent};"></span>
+                                        <span style="font-weight:700;font-size:0.82rem;color:var(--text-primary);">${layer.tag}</span>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:8px;">
+                                        ${componentsInLayer.map(c => `
+                                            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;">
+                                                <div style="font-weight:700;font-size:0.78rem;color:var(--text-primary);">${c.icon} ${c.name}</div>
+                                                <p style="font-size:0.72rem;color:var(--text-secondary);margin-top:3px;line-height:1.4;">${c.desc}</p>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            } else if (activeExplainerTab === 'code') {
+                body.innerHTML = `
+                    <div style="font-size:0.78rem;font-weight:700;color:var(--text-primary);margin-bottom:10px;">Concrete Code & Signatures: ${feat.label}</div>
+                    <div style="display:flex;flex-direction:column;gap:14px;">
+                        ${pathPillars.map(p => `
+                            <div style="background:var(--surface-subtle);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                    <span style="font-weight:700;font-size:0.82rem;color:var(--text-primary);">${p.icon} ${p.name}</span>
+                                    <span class="badge-pill subtle">${p.team}</span>
+                                </div>
+                                <div style="margin-bottom:6px;">
+                                    <div style="font-size:0.68rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:4px;">Source File</div>
+                                    <div class="inspector-code-box">📄 ${(p.files && p.files[0]) || 'core/system.py'}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.68rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:4px;">Symbol Signature</div>
+                                    <div class="inspector-code-box">${p.signature || 'def handler(request)'}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else if (activeExplainerTab === 'invariants') {
+                const relevantNotes = (currentData.notes || []).filter(n => feat.path.includes(n.targetNode));
+                body.innerHTML = `
+                    <div class="explainer-callout-box" style="border-left: 4px solid #38BDF8;margin-bottom:14px;">
+                        <div style="font-size:0.7rem;font-weight:800;color:#38BDF8;text-transform:uppercase;margin-bottom:4px;">Feature Data Contract</div>
+                        <div style="font-family:var(--font-mono);font-size:0.74rem;color:var(--text-primary);line-height:1.45;">${feat.contract || 'Standard JSON envelope with Authorization Bearer header'}</div>
+                    </div>
+
+                    <div class="explainer-callout-box" style="border-left: 4px solid #FB7185;margin-bottom:14px;">
+                        <div style="font-size:0.7rem;font-weight:800;color:#FB7185;text-transform:uppercase;margin-bottom:4px;">Architectural Invariant</div>
+                        <div style="font-size:0.74rem;color:var(--text-secondary);line-height:1.45;">${feat.invariants || 'Strict tenant isolation and transactional atomicity.'}</div>
+                    </div>
+
+                    <div style="font-size:0.78rem;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Relevant Architectural Notes & ADRs</div>
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        ${relevantNotes.map(n => `
+                            <div class="canvas-note-card ${n.type}" style="width:100%;">
+                                <div class="note-card-header">
+                                    <span class="note-type-badge ${n.type}">${n.type.toUpperCase()}</span>
+                                    <span style="font-size:0.65rem;color:var(--text-tertiary);">${n.file}</span>
+                                </div>
+                                <div class="note-card-title">${n.title}</div>
+                                <p style="font-size:0.74rem;color:var(--text-secondary);line-height:1.45;">${n.full_text}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else if (activeExplainerTab === 'multi') {
+                const activeList = currentData.features_menu.filter(f => activeFeatureIds.has(f.id));
+                const nodeOccurrences = {};
+                activeList.forEach(f => {
+                    f.path.forEach(id => {
+                        nodeOccurrences[id] = (nodeOccurrences[id] || 0) + 1;
+                    });
+                });
+
+                const bottleneckNodes = Object.keys(nodeOccurrences)
+                    .filter(id => nodeOccurrences[id] > 1)
+                    .map(id => currentData.pillars.find(p => p.id === id))
+                    .filter(Boolean);
+
+                body.innerHTML = `
+                    <div style="font-size:0.78rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;">Multi-Feature Contention Analysis</div>
+                    <p style="font-size:0.74rem;color:var(--text-secondary);line-height:1.45;margin-bottom:14px;">
+                        Currently analyzing <strong>${activeList.length} active features</strong> (${activeList.map(f => f.label).join(', ')}).
+                    </p>
+
+                    ${bottleneckNodes.length > 0 ? `
+                        <div style="background:rgba(225, 29, 72, 0.08);border:1px solid rgba(225, 29, 72, 0.3);border-radius:var(--radius-md);padding:16px;margin-bottom:14px;">
+                            <div style="font-size:0.8rem;font-weight:800;color:#E11D48;margin-bottom:6px;">🔥 High-Contention Convergence Points</div>
+                            <p style="font-size:0.73rem;color:var(--text-secondary);line-height:1.4;margin-bottom:10px;">
+                                Multiple concurrent features traverse the following architectural pillars simultaneously. Any bottleneck, latency spike, or signature breakage here will impact multiple user features:
+                            </p>
+                            <div style="display:flex;flex-direction:column;gap:8px;">
+                                ${bottleneckNodes.map(bn => `
+                                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;display:flex;align-items:center;justify-content:space-between;">
+                                        <div>
+                                            <span style="font-weight:700;font-size:0.78rem;color:var(--text-primary);">${bn.icon} ${bn.name}</span>
+                                            <div style="font-size:0.68rem;color:var(--text-secondary);">${bn.mission}</div>
+                                        </div>
+                                        <span class="badge-pill coral" style="font-weight:800;">Traversed by ${nodeOccurrences[bn.id]} features</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="background:var(--surface-subtle);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;">
+                            <div style="font-size:0.8rem;font-weight:700;color:var(--text-primary);">Zero Bottleneck Contention</div>
+                            <p style="font-size:0.73rem;color:var(--text-secondary);margin-top:4px;">The selected active features follow completely independent, isolated paths with no shared state collision.</p>
+                        </div>
+                    `}
+
+                    <div style="font-size:0.78rem;font-weight:700;color:var(--text-primary);margin-top:14px;margin-bottom:8px;">Quick Actions</div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="pill-btn" onclick="selectAllFeatureFlows(); renderExplainerTabContent();">Simulate All Features</button>
+                        <button class="pill-btn" onclick="clearAllFeatureFlows(); renderExplainerTabContent();">Reset to Single Feature</button>
+                    </div>
+                `;
+            }
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // DYNAMIC BOX-RAY INTERSECTION
+        // ═════════════════════════════════════════════════════════════
+        function getBoxRayIntersection(src, dst, w, h) {
+            const dx = dst.x - src.x;
+            const dy = dst.y - src.y;
+            if (Math.abs(dx) < 1e-5 && Math.abs(dy) < 1e-5) return { x: dst.x, y: dst.y };
+
+            const halfW = w / 2 + 3;
+            const halfH = h / 2 + 3;
+            const tan = dy / dx;
+
+            let ix, iy;
+            if (Math.abs(tan) <= halfH / halfW) {
+                ix = dx > 0 ? dst.x - halfW : dst.x + halfW;
+                iy = dst.y - (dx > 0 ? 1 : -1) * halfW * tan;
+            } else {
+                iy = dy > 0 ? dst.y - halfH : dst.y + halfH;
+                ix = dst.x - (dy > 0 ? 1 : -1) * halfH / tan;
+            }
+            return { x: ix, y: iy };
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // NODE SELECTION & GENTLE AUTO-PAN
+        // ═════════════════════════════════════════════════════════════
+        function selectGraphNode(nodeId) {
+            activePillarId = nodeId;
+            highlightGraphNode(nodeId);
+            openNodeInspector(nodeId);
+
+            renderBlueprintStage();
+            const leftCard = document.querySelector(`.component-card[data-pillar="${nodeId}"]`);
+            if (leftCard) {
+                leftCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function highlightGraphNode(nodeId) {
+            d3.selectAll('.graph-node-pill').classed('selected', false);
+            d3.select(`#node-pill-${nodeId}`).classed('selected', true);
+        }
+
+        function handleNodeCardClick(pillarId) {
+            if (currentRightView !== 'mesh') {
+                switchRightView('mesh');
+            }
+            selectGraphNode(pillarId);
+            const p = currentData.pillars.find(x => x.id === pillarId);
+            showToast(`Inspecting: ${p ? p.name : pillarId}`);
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // SLIDE-IN NODE & EDGE INSPECTOR PANEL (LOW-LEVEL DRILL DOWN)
+        // ═════════════════════════════════════════════════════════════
+        function openNodeInspector(nodeId) {
+            const node = currentData.pillars.find(p => p.id === nodeId);
+            if (!node) return;
+
+            document.getElementById('inspNodeName').innerText = `${node.icon} ${node.name}`;
+            document.getElementById('inspNodeType').innerText = (node.type || 'logic').toUpperCase();
+
+            // Day-1 Onboarding Brief
+            const onboardBox = document.getElementById('inspOnboardBox');
+            if (onboardBox) {
+                onboardBox.style.display = 'block';
+                document.getElementById('inspOnboardMentalModel').innerText = node.onboarding_mental_model || node.mission;
+                document.getElementById('inspOnboardInvariant').innerText = node.onboarding_invariant 
+                    ? `🛡️ Invariant: ${node.onboarding_invariant}` 
+                    : `🛡️ Invariant: Strictly encapsulated subsystem boundary`;
+            }
+
+            document.getElementById('inspRoleLabel').innerText = 'Mission / Architectural Role';
+            document.getElementById('inspMission').innerText = node.mission;
+            document.getElementById('inspFileLabel').innerText = 'Primary Source File';
+            document.getElementById('inspFilePath').innerText = (node.files && node.files[0]) || 'core/system.py';
+
+            // Day-1 Reading List (Top 2 files with line numbers)
+            const readingWrap = document.getElementById('inspReadingListWrap');
+            const readingList = document.getElementById('inspReadingList');
+            if (readingWrap && readingList) {
+                const files = (node.reading_list && node.reading_list.length > 0) ? node.reading_list : (node.files || []);
+                if (files.length > 0) {
+                    readingWrap.style.display = 'block';
+                    readingList.innerHTML = '';
+                    files.forEach(f => {
+                        const chip = document.createElement('button');
+                        chip.className = 'onboarding-file-chip';
+                        chip.innerHTML = `📄 <code>${f}</code>`;
+                        chip.title = `Primary reading file: ${f}`;
+                        chip.onclick = () => {
+                            document.getElementById('inspFilePath').innerText = f;
+                            showToast(`Day-1 File: ${f}`);
+                        };
+                        readingList.appendChild(chip);
+                    });
+                } else {
+                    readingWrap.style.display = 'none';
+                }
+            }
+
+            const symWrap = document.getElementById('inspSymbolsWrap');
+            const symList = document.getElementById('inspSymbolsList');
+            if (node.symbols && node.symbols.length > 0) {
+                if (symWrap) symWrap.style.display = 'block';
+                symList.innerHTML = '';
+                node.symbols.forEach((s, idx) => {
+                    const chip = document.createElement('button');
+                    chip.className = `inspector-symbol-chip ${idx === 0 ? 'active' : ''}`;
+                    chip.innerHTML = `<code>${s.name}</code>`;
+                    chip.title = `${s.sig}\n${s.file}`;
+                    chip.onclick = () => {
+                        symList.querySelectorAll('.inspector-symbol-chip').forEach(c => c.classList.remove('active'));
+                        chip.classList.add('active');
+                        document.getElementById('inspCodeSnippet').innerText = s.snippet || s.sig;
+                        document.getElementById('inspFilePath').innerText = s.file;
+                    };
+                    symList.appendChild(chip);
+                });
+            } else if (symWrap) {
+                symWrap.style.display = 'none';
+            }
+
+            const snippetWrap = document.getElementById('inspSnippetWrap');
+            if (snippetWrap) snippetWrap.style.display = 'block';
+            document.getElementById('inspSnippetTitle').innerText = 'Executing Code Snippet';
+            const firstSnippet = (node.symbols && node.symbols[0] && node.symbols[0].snippet) || node.code_snippet || node.signature || '# Source code implementation';
+            document.getElementById('inspCodeSnippet').innerText = firstSnippet;
+
+            document.getElementById('inspDepLabel').innerText = 'Downstream Dependents';
+            const depContainer = document.getElementById('inspDependentsList');
+            depContainer.innerHTML = '';
+            if (node.dependents && node.dependents.length > 0) {
+                node.dependents.forEach(depId => {
+                    const depNode = currentData.pillars.find(p => p.id === depId);
+                    const chip = document.createElement('button');
+                    chip.className = 'inspector-link-chip';
+                    chip.innerHTML = `${depNode ? depNode.icon : '➔'} ${depNode ? depNode.name : depId}`;
+                    chip.onclick = () => selectGraphNode(depId);
+                    depContainer.appendChild(chip);
+                });
+            } else {
+                depContainer.innerHTML = `<span style="font-size:0.72rem;color:var(--text-tertiary);">Terminal leaf node (No downstream dependents)</span>`;
+            }
+
+            const callersWrap = document.getElementById('inspCallersWrap');
+            if (callersWrap) callersWrap.style.display = 'block';
+            const callContainer = document.getElementById('inspCallersList');
+            callContainer.innerHTML = '';
+            const callers = currentData.pillars.filter(p => (p.dependents || []).includes(nodeId));
+            if (callers.length > 0) {
+                callers.forEach(c => {
+                    const chip = document.createElement('button');
+                    chip.className = 'inspector-link-chip';
+                    chip.innerHTML = `${c.icon} ${c.name}`;
+                    chip.onclick = () => selectGraphNode(c.id);
+                    callContainer.appendChild(chip);
+                });
+            } else {
+                callContainer.innerHTML = `<span style="font-size:0.72rem;color:var(--text-tertiary);">Top-level ingress entrypoint</span>`;
+            }
+
+            document.getElementById('nodeInspector').classList.add('open');
+        }
+
+        function openEdgeInspector(srcId, dstId) {
+            const srcNode = currentData.pillars.find(p => p.id === srcId);
+            const dstNode = currentData.pillars.find(p => p.id === dstId);
+            if (!srcNode || !dstNode) return;
+
+            document.getElementById('inspNodeName').innerText = `${srcNode.icon} ${srcNode.name} ➔ ${dstNode.icon} ${dstNode.name}`;
+            const isAsync = srcNode.type === 'ui' || dstNode.type === 'db';
+            document.getElementById('inspNodeType').innerText = isAsync ? 'ASYNC / DB BOUNDARY' : 'SYNC IN-PROCESS CALL';
+            
+            // Check active feature step
+            const activeFeat = (currentData.features_menu || []).find(f => activeFeatureIds.has(f.id));
+            const edgeKey1 = `${srcId}->${dstId}`;
+            const edgeKey2 = `${dstId}->${srcId}`;
+            const stepInfo = activeFeat && activeFeat.edge_steps && (activeFeat.edge_steps[edgeKey1] || activeFeat.edge_steps[edgeKey2]);
+
+            // Day-1 Onboarding Brief for Edge
+            const onboardBox = document.getElementById('inspOnboardBox');
+            if (onboardBox) {
+                onboardBox.style.display = 'block';
+                document.getElementById('inspOnboardMentalModel').innerText = stepInfo 
+                    ? `${stepInfo.desc} (${activeFeat ? activeFeat.label : 'Active Flow'})`
+                    : (isAsync ? `Cross-boundary call between ${srcNode.name} and ${dstNode.name}. Data traverses network/storage protocol boundary.` : `Synchronous direct call. Caller invokes callee function directly.`);
+                document.getElementById('inspOnboardInvariant').innerText = activeFeat 
+                    ? `🛡️ Invariant: ${activeFeat.invariants}` 
+                    : `🛡️ Invariant: Network timeout and error propagation`;
+            }
+
+            document.getElementById('inspRoleLabel').innerText = 'Invocation Semantics';
+            document.getElementById('inspMission').innerText = stepInfo 
+                ? `${stepInfo.desc} (Active Flow: ${activeFeat.label})`
+                : (isAsync ? `Cross-boundary call between ${srcNode.name} and ${dstNode.name}. Data traverses network/storage protocol boundary.` : `Synchronous direct call. Caller invokes callee function directly.`);
+            
+            document.getElementById('inspFileLabel').innerText = 'Call Transition Boundary';
+            document.getElementById('inspFilePath').innerText = `${srcNode.files ? srcNode.files[0] : ''} ➔ ${dstNode.files ? dstNode.files[0] : ''}`;
+
+            const readingWrap = document.getElementById('inspReadingListWrap');
+            if (readingWrap) readingWrap.style.display = 'none';
+
+            const symWrap = document.getElementById('inspSymbolsWrap');
+            if (symWrap) symWrap.style.display = 'none';
+
+            const snippetWrap = document.getElementById('inspSnippetWrap');
+            if (snippetWrap) snippetWrap.style.display = 'block';
+            document.getElementById('inspSnippetTitle').innerText = 'Call Contract & Execution Code';
+            document.getElementById('inspCodeSnippet').innerText = (stepInfo && stepInfo.snippet) || `// Direct execution transition\n${srcNode.signature || ''}\n➔ ${dstNode.signature || ''}`;
+
+            document.getElementById('inspDepLabel').innerText = 'Callee (Destination)';
+            const depContainer = document.getElementById('inspDependentsList');
+            depContainer.innerHTML = `<button class="inspector-link-chip" onclick="selectGraphNode('${dstNode.id}')">${dstNode.icon} ${dstNode.name}</button>`;
+
+            const callersWrap = document.getElementById('inspCallersWrap');
+            if (callersWrap) callersWrap.style.display = 'block';
+            const callContainer = document.getElementById('inspCallersList');
+            callContainer.innerHTML = `<button class="inspector-link-chip" onclick="selectGraphNode('${srcNode.id}')">${srcNode.icon} ${srcNode.name}</button>`;
+
+            document.getElementById('nodeInspector').classList.add('open');
+            showToast(`Arrow: ${srcNode.name} ➔ ${dstNode.name} (${isAsync ? 'Async' : 'Sync'})`);
+        }
+
+        function closeNodeInspector() {
+            document.getElementById('nodeInspector').classList.remove('open');
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // FEATURE PLAYBACK & TRAVELING PULSE ENGINE
+        // ═════════════════════════════════════════════════════════════
+        function populatePlaybackTraces() {
+            const select = document.getElementById('traceSelect');
+            if (!select) return;
+            select.innerHTML = '';
+
+            const offOpt = document.createElement('option');
+            offOpt.value = 'none';
+            offOpt.innerText = 'Static Architecture (No Flow)';
+            select.appendChild(offOpt);
+
+            (currentData.features_menu || []).forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.innerText = `${f.num}. ${f.label}`;
+                select.appendChild(opt);
+            });
+
+            const allOpt = document.createElement('option');
+            allOpt.value = 'all';
+            allOpt.innerText = '⚡ All Concurrent Flows';
+            select.appendChild(allOpt);
+
+            if (currentData.features_menu && currentData.features_menu.length > 0) {
+                select.value = currentData.features_menu[0].id;
+                activePlaybackTrace = currentData.features_menu[0];
+                activeFeatureIds.clear();
+                activeFeatureIds.add(activePlaybackTrace.id);
+            }
+            playbackStepIndex = 0;
+            updateStepBadge();
+        }
+
+        function selectPlaybackTrace(traceId) {
+            stopPlayback();
+            activeFeatureIds.clear();
+
+            if (traceId === 'none') {
+                activePlaybackTrace = null;
+                highlightActiveFeatureFlows();
+                updateStepBadge();
+                showToast('Static Architecture view');
+                return;
+            }
+
+            if (traceId === 'all') {
+                (currentData.features_menu || []).forEach(f => activeFeatureIds.add(f.id));
+                activePlaybackTrace = currentData.features_menu[0];
+                playbackStepIndex = 0;
+                highlightActiveFeatureFlows();
+                updateStepBadge();
+                showToast('Simulating all concurrent flows');
+                return;
+            }
+
+            activePlaybackTrace = currentData.features_menu.find(f => f.id === traceId) || currentData.features_menu[0];
+            activeFeatureIds.add(activePlaybackTrace.id);
+            playbackStepIndex = 0;
+            highlightActiveFeatureFlows();
+            updateStepBadge();
+            showToast(`Active flow: ${activePlaybackTrace.label}`);
+        }
+
+        function updateStepBadge() {
+            const badge = document.getElementById('playbackStepBadge');
+            if (!badge) return;
+            if (!activePlaybackTrace || !activePlaybackTrace.path) {
+                badge.innerText = 'Ready';
+                return;
+            }
+            const total = activePlaybackTrace.path.length;
+            badge.innerText = `Step ${playbackStepIndex + 1}/${total}`;
+        }
+
+        function togglePlayPause() {
+            if (isPlaying) {
+                stopPlayback();
+            } else {
+                startPlayback();
+            }
+        }
+
+        function startPlayback() {
+            isPlaying = true;
+            document.getElementById('btnPlayPause').innerText = '⏸️';
+            highlightActiveFeatureFlows();
+
+            const names = Array.from(activeFeatureIds).map(id => {
+                const f = currentData.features_menu.find(x => x.id === id);
+                return f ? f.label : id;
+            }).join(' + ');
+
+            showToast(`▶️ Playing: ${names}`);
+            runPlaybackStep();
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            if (playbackTimer) clearTimeout(playbackTimer);
+            document.getElementById('btnPlayPause').innerText = '▶️';
+            d3.selectAll('.graph-edge-path').classed('active-flow', false).attr('marker-end', 'url(#arrow)');
+            d3.select('#pulseLayer').selectAll('*').remove();
+            highlightActiveFeatureFlows();
+        }
+
+        function stepPlayback(delta) {
+            if (!activePlaybackTrace || !activePlaybackTrace.path) return;
+            stopPlayback();
+            playbackStepIndex = Math.max(0, Math.min(activePlaybackTrace.path.length - 1, playbackStepIndex + delta));
+            highlightActiveFeatureFlows();
+            highlightStepNodes(activePlaybackTrace.path, playbackStepIndex);
+            updateStepBadge();
+        }
+
+        function setPlaySpeed(spd, btn) {
+            playbackSpeed = spd;
+            document.querySelectorAll('.speed-pill-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            showToast(`Speed set to ${spd}x`);
+        }
+
+        function runPlaybackStep() {
+            if (!isPlaying) return;
+
+            const activeFeatures = currentData.features_menu.filter(f => activeFeatureIds.has(f.id));
+            if (activeFeatures.length === 0) return;
+
+            // Check if max path step reached across all active features
+            const maxPathLen = Math.max(...activeFeatures.map(f => f.path.length));
+
+            if (playbackStepIndex >= maxPathLen - 1) {
+                playbackTimer = setTimeout(() => {
+                    playbackStepIndex = 0;
+                    if (isPlaying) runPlaybackStep();
+                }, 2200 / playbackSpeed);
+                return;
+            }
+
+            updateStepBadge();
+
+            // Run concurrent pulses for all active features having this step
+            let arrivalsPending = 0;
+
+            activeFeatures.forEach(f => {
+                if (playbackStepIndex < f.path.length - 1) {
+                    const srcId = f.path[playbackStepIndex];
+                    const dstId = f.path[playbackStepIndex + 1];
+                    highlightGraphNode(srcId);
+                    arrivalsPending++;
+
+                    animateTravelingPulse(srcId, dstId, f.color, () => {
+                        arrivalsPending--;
+                        highlightGraphNode(dstId);
+                        if (arrivalsPending <= 0) {
+                            playbackStepIndex++;
+                            updateStepBadge();
+                            const stepDelay = 900 / playbackSpeed;
+                            playbackTimer = setTimeout(runPlaybackStep, stepDelay);
+                        }
+                    });
+                }
+            });
+
+            if (arrivalsPending === 0) {
+                playbackStepIndex++;
+                runPlaybackStep();
+            }
+        }
+
+        function highlightStepNodes(path, idx) {
+            const nodeId = path[idx];
+            highlightGraphNode(nodeId);
+            showToast(`Step ${idx + 1}: ${nodeId.replace('-', ' ').toUpperCase()}`);
+        }
+
+        function getEdgeElement(srcId, dstId) {
+            return document.getElementById(`edge-${srcId}-${dstId}`) ||
+                   document.getElementById(`edge-${dstId}-${srcId}`) ||
+                   document.querySelector(`[id*="${srcId}"][id*="${dstId}"]`);
+        }
+
+        // Traveling pulse supporting custom feature colors
+        function animateTravelingPulse(srcId, dstId, color, onArrival) {
+            const edgeEl = getEdgeElement(srcId, dstId);
+            if (!edgeEl) {
+                if (onArrival) onArrival();
+                return;
+            }
+
+            const pulseColor = color || 'var(--lime-accent)';
+            d3.select(edgeEl).classed('active-flow', true).classed('dimmed-edge', false);
+
+            const totalLength = edgeEl.getTotalLength();
+            const pulseLayer = d3.select('#pulseLayer');
+
+            const dot = pulseLayer.append('circle')
+                .attr('r', 6)
+                .attr('fill', pulseColor)
+                .attr('filter', `drop-shadow(0 0 10px ${pulseColor})`);
+
+            const duration = 850 / playbackSpeed;
+            const startTime = performance.now();
+
+            function frame(now) {
+                const elapsed = now - startTime;
+                const rawProgress = Math.min(1, elapsed / duration);
+
+                const progress = rawProgress < 0.5
+                    ? 2 * rawProgress * rawProgress
+                    : -1 + (4 - 2 * rawProgress) * rawProgress;
+
+                const currentDistance = progress * totalLength;
+                const pt = edgeEl.getPointAtLength(currentDistance);
+                dot.attr('cx', pt.x).attr('cy', pt.y);
+
+                if (rawProgress < 1 && isPlaying) {
+                    requestAnimationFrame(frame);
+                } else {
+                    dot.remove();
+                    if (onArrival) onArrival();
+                }
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // RIGHT PANE: PILLARS LIST VIEW
+        // ═════════════════════════════════════════════════════════════
+        function renderPillarsList() {
+            const container = document.getElementById('pillarsView');
+            container.innerHTML = '';
+
+            currentData.pillars.forEach(p => {
+                const card = document.createElement('div');
+                card.className = `pillar-bento-card ${activePillarId === p.id ? 'selected' : ''}`;
+                card.dataset.pillar = p.id;
+                card.onclick = () => selectGraphNode(p.id);
+
+                card.innerHTML = `
+                    <div class="pillar-top-row">
+                        <div class="pillar-heading">
+                            <span style="font-size: 1.25rem;">${p.icon}</span>
+                            <span>${p.name}</span>
+                        </div>
+                        <span class="badge-pill subtle">${p.team}</span>
+                    </div>
+                    <div class="pillar-desc-text">${p.mission}</div>
+                    <div class="pillar-tag-row">
+                        <span class="badge-pill lime">84% Tests</span>
+                        <span class="badge-pill lilac">${p.files ? p.files.length : 1} File${p.files && p.files.length > 1 ? 's' : ''}</span>
+                        <span class="badge-pill coral">${(p.dependents || []).length} Downstream Dependents</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // EXECUTION TRACE DRAWER & STAGE 2
+        // ═════════════════════════════════════════════════════════════
+        function openTraceDrawer(featureId) {
+            const trace = currentData.traces[featureId] || Object.values(currentData.traces)[0];
+            if (!trace) return;
+
+            document.getElementById('drawerTitle').innerText = trace.title;
+            const body = document.getElementById('drawerBody');
+            body.innerHTML = '';
+
+            trace.steps.forEach((step, idx) => {
+                const stepEl = document.createElement('div');
+                stepEl.className = 'trace-step-card';
+                stepEl.innerHTML = `
+                    <span class="trace-step-badge">Step ${idx + 1}</span>
+                    <div class="trace-step-title">${step.title}</div>
+                    <span class="trace-step-file">📄 ${step.file}</span>
+                    <div class="trace-step-desc">${step.desc}</div>
+                `;
+                body.appendChild(stepEl);
+            });
+
+            document.getElementById('execDrawer').classList.add('open');
+        }
+
+        function closeDrawer() {
+            document.getElementById('execDrawer').classList.remove('open');
+        }
+
+        function triggerStage2Prompt() {
+            const firstFeature = currentData.features_menu[0];
+            if (firstFeature) openTraceDrawer(firstFeature.id);
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // BLAST RADIUS SIMULATOR MODAL
+        // ═════════════════════════════════════════════════════════════
+        function openBlastModal(targetId) {
+            const blastKeys = Object.keys(currentData.blast || {});
+            currentBlastTarget = targetId && currentData.blast[targetId] ? targetId : blastKeys[0];
+            renderBlastPills();
+            renderBlastDetails();
+            document.getElementById('blastModal').classList.add('open');
+            document.getElementById('blastOverlay').classList.add('visible');
+        }
+
+        function closeBlastModal() {
+            document.getElementById('blastModal').classList.remove('open');
+            document.getElementById('blastOverlay').classList.remove('visible');
+        }
+
+        function renderBlastPills() {
+            const container = document.getElementById('blastPillButtons');
+            container.innerHTML = '';
+            const blastKeys = Object.keys(currentData.blast || {});
+
+            blastKeys.forEach(key => {
+                const pill = document.createElement('button');
+                pill.className = `blast-target-btn ${key === currentBlastTarget ? 'active' : ''}`;
+                pill.innerText = currentData.blast[key].title.split('(')[0].trim();
+                pill.onclick = () => {
+                    currentBlastTarget = key;
+                    renderBlastPills();
+                    renderBlastDetails();
+                };
+                container.appendChild(pill);
+            });
+        }
+
+        function renderBlastDetails() {
+            const card = document.getElementById('blastScorecard');
+            const d = currentData.blast[currentBlastTarget] || Object.values(currentData.blast)[0];
+            if (!d) {
+                card.innerHTML = `<div style="color:var(--text-secondary);font-size:0.8rem;padding:20px;">No blast telemetry defined.</div>`;
+                return;
+            }
+
+            card.innerHTML = `
+                <div style="background:var(--surface-subtle);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;margin-top:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                        <div>
+                            <div style="font-size:0.9rem;font-weight:700;color:var(--text-primary);">${d.title}</div>
+                            <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;">Simulating breaking signature change or deletion</div>
+                        </div>
+                        <span class="badge-pill coral" style="font-weight:700;">Risk Score: ${d.risk_score} / 100</span>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
+                        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;">
+                            <div style="font-size:0.75rem;font-weight:700;color:#E11D48;margin-bottom:6px;">💥 Direct Breakage</div>
+                            <ul style="list-style:none;font-size:0.72rem;color:var(--text-secondary);display:flex;flex-direction:column;gap:4px;">
+                                ${d.direct_breakage.map(item => `<li>✕ ${item}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;">
+                            <div style="font-size:0.75rem;font-weight:700;color:#D97706;margin-bottom:6px;">⚠️ Downstream Impact</div>
+                            <ul style="list-style:none;font-size:0.72rem;color:var(--text-secondary);display:flex;flex-direction:column;gap:4px;">
+                                ${d.downstream_impact.map(item => `<li>! ${item}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function triggerMeshBlastSimulation() {
+            closeBlastModal();
+            switchRightView('mesh');
+            selectGraphNode(currentBlastTarget);
+            showToast(`💥 Simulating blast impact across connected dependencies!`);
+        }
+
+        function copySafetyRunbook() {
+            const d = currentData.blast[currentBlastTarget];
+            if (!d) return;
+            const text = `SAFETY RUNBOOK FOR: ${d.title}\nRisk: ${d.risk_score}/100\nSafety Tests: ${d.safety_tests}\nContacts: ${d.emergency_contacts}`;
+            navigator.clipboard.writeText(text).then(() => showToast('📋 Safety Runbook copied to clipboard!'));
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // THEME & TOAST
+        // ═════════════════════════════════════════════════════════════
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            if (currentRightView === 'mesh') initForceGraph();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // ADJUSTABLE SPLITTER RESIZER
+        // ═════════════════════════════════════════════════════════════
+        function initLayoutResizer() {
+            const resizer = document.getElementById('layoutResizer');
+            const layout = document.getElementById('appLayout');
+            const leftCol = document.getElementById('leftBlueprintCol');
+            if (!resizer || !layout || !leftCol) return;
+
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+
+            // Load saved width from localStorage if exists
+            const savedPct = localStorage.getItem('onbob_left_panel_pct');
+            if (savedPct) {
+                const pct = Math.max(20, Math.min(80, parseFloat(savedPct)));
+                leftCol.style.width = `${pct}%`;
+            }
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = leftCol.getBoundingClientRect().width;
+                document.body.classList.add('resizing-active');
+                resizer.classList.add('dragging');
+                e.preventDefault();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const totalWidth = layout.getBoundingClientRect().width - 48; // padding
+                const deltaX = e.clientX - startX;
+                let newWidth = startWidth + deltaX;
+
+                // Clamping constraints
+                const minW = 280;
+                const maxW = totalWidth - 320;
+                newWidth = Math.max(minW, Math.min(maxW, newWidth));
+
+                const pct = (newWidth / totalWidth) * 100;
+                leftCol.style.width = `${pct}%`;
+
+                // Update D3 simulation center on resize
+                if (simulation) {
+                    const container = document.getElementById('meshCanvas');
+                    const w = container.clientWidth || 550;
+                    const h = container.clientHeight || 450;
+                    simulation.force('center', d3.forceCenter(w / 2, h / 2).strength(0.8));
+                    simulation.alpha(0.08).restart();
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (!isResizing) return;
+                isResizing = false;
+                document.body.classList.remove('resizing-active');
+                resizer.classList.remove('dragging');
+
+                // Persist percentage
+                const totalWidth = layout.getBoundingClientRect().width - 48;
+                const currentW = leftCol.getBoundingClientRect().width;
+                const pct = (currentW / totalWidth) * 100;
+                localStorage.setItem('onbob_left_panel_pct', pct.toFixed(2));
+
+                // Re-center graph smoothly
+                if (simulation) {
+                    const container = document.getElementById('meshCanvas');
+                    const w = container.clientWidth || 550;
+                    const h = container.clientHeight || 450;
+                    simulation.force('center', d3.forceCenter(w / 2, h / 2).strength(0.8));
+                    simulation.alpha(0.15).restart();
+                }
+            });
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // FEATURE FLOW HELPERS
+        // ═════════════════════════════════════════════════════════════
+        function selectAllFeatureFlows() {
+            stopPlayback();
+            activeFeatureIds.clear();
+            (currentData.features_menu || []).forEach(f => activeFeatureIds.add(f.id));
+            if (currentData.features_menu && currentData.features_menu.length > 0) {
+                activePlaybackTrace = currentData.features_menu[0];
+            }
+            playbackStepIndex = 0;
+            highlightActiveFeatureFlows();
+            updateStepBadge();
+            showToast('Simulating all feature flows');
+        }
+
+        function clearAllFeatureFlows() {
+            stopPlayback();
+            activeFeatureIds.clear();
+            if (currentData.features_menu && currentData.features_menu.length > 0) {
+                activeFeatureIds.add(currentData.features_menu[0].id);
+                activePlaybackTrace = currentData.features_menu[0];
+            }
+            playbackStepIndex = 0;
+            highlightActiveFeatureFlows();
+            updateStepBadge();
+            showToast('Reset to single feature flow');
+        }
+
+        // ─── Fit Graph ────────────────────────────────────────────────
+        function fitGraph() {
+            if (!svg || !zoomBehavior) return;
+            const container = document.getElementById('meshCanvas');
+            if (!container) return;
+            const w = container.clientWidth || 800;
+            const h = container.clientHeight || 600;
+            svg.transition().duration(480)
+                .call(zoomBehavior.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(0.72));
+            showToast('Graph fitted ⊞');
+        }
+
+        // ═════════════════════════════════════════════════════════════
+        // BOOT — loads first repo from window.__ONBOB_DATA__ dynamically
+        // ═════════════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstKey = Object.keys(REPO_PROFILES)[0];
+            const profile   = REPO_PROFILES[firstKey];
+
+            // Populate header meta spans
+            const repoNameEl = document.getElementById('repoNameDisplay');
+            if (repoNameEl) repoNameEl.textContent = profile.repo_name || firstKey;
+
+            const langEl = document.getElementById('repoLangDisplay');
+            if (langEl && profile.lang) langEl.textContent = profile.lang;
+
+            const fileEl = document.getElementById('repoFileCountDisplay');
+            if (fileEl && profile.file_count) fileEl.textContent = `${profile.file_count.toLocaleString()} files`;
+
+            switchRepoProfile(firstKey);
+            switchRightView('mesh');
+            initLayoutResizer();
+
+            window.addEventListener('resize', () => {
+                if (currentRightView === 'mesh') initForceGraph();
+            });
+
+            // ── Global keyboard shortcuts ─────────────────────────────
+            document.addEventListener('keydown', (e) => {
+                // Skip when typing in an input / textarea
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                switch (e.key.toUpperCase()) {
+                    case 'T':
+                        toggleTheme();
+                        break;
+                    case 'F':
+                        fitGraph();
+                        break;
+                    case 'ESCAPE':
+                        // Close trace drawer
+                        const drawer = document.getElementById('traceDrawer');
+                        if (drawer && drawer.classList.contains('open')) {
+                            drawer.classList.remove('open');
+                        }
+                        // Close feature explainer
+                        const explainer = document.getElementById('featureExplainer');
+                        if (explainer && explainer.classList.contains('open')) {
+                            explainer.classList.remove('open');
+                        }
+                        // Close blast modal
+                        const blastModal = document.getElementById('blastModal');
+                        if (blastModal && blastModal.style.display !== 'none' && blastModal.style.display !== '') {
+                            blastModal.style.display = 'none';
+                        }
+                        break;
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
